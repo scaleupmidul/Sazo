@@ -56,13 +56,14 @@ const AdminPaymentInfoPage: React.FC = () => {
                             <th scope="col" className="px-6 py-3">Method</th>
                             <th scope="col" className="px-6 py-3">Sender No.</th>
                             <th scope="col" className="px-6 py-3">TxID</th>
-                            <th scope="col" className="px-6 py-3">Amount</th>
+                            <th scope="col" className="px-6 py-3">Delivery Charge</th>
                             <th scope="col" className="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredRecords.length > 0 ? filteredRecords.map(order => {
                             const cartSubtotal = order.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+                            const deliveryCharge = order.total - cartSubtotal;
 
                             return (
                                 <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
@@ -75,7 +76,7 @@ const AdminPaymentInfoPage: React.FC = () => {
                                     <td className="px-6 py-4">{order.paymentDetails?.method}</td>
                                     <td className="px-6 py-4">{order.paymentDetails?.paymentNumber}</td>
                                     <td className="px-6 py-4 text-gray-800 font-mono text-xs">{order.paymentDetails?.transactionId}</td>
-                                    <td className="px-6 py-4 font-semibold">৳{cartSubtotal.toLocaleString()}</td>
+                                    <td className="px-6 py-4 font-semibold">৳{deliveryCharge.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-right">
                                         <button 
                                             onClick={() => handleDelete(order.id)}
