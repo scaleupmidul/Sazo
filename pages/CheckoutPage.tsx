@@ -383,7 +383,7 @@ const CheckoutPage: React.FC = () => {
           </div>
           
           <div>
-            <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Select Delivery Area</h3>
+            <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Delivery Charge</h3>
             <div className="space-y-3">
               {safeSettings.shippingOptions.length > 0 ? safeSettings.shippingOptions.map((option) => {
                  if (!option || !option.id) return null;
