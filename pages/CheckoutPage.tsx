@@ -27,7 +27,7 @@ const CheckoutPageSkeleton: React.FC = () => (
         
         <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8">
             
-            {/* Order Summary Skeleton (Right Column) - Wider (2/5) */}
+            {/* Order Summary Skeleton (Right Column - Wider) */}
             <div className="lg:col-span-2 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
                 <div className="h-7 bg-stone-200 rounded w-1/2 mb-6"></div>
                 <div className="space-y-4">
@@ -60,7 +60,7 @@ const CheckoutPageSkeleton: React.FC = () => (
                 </div>
             </div>
 
-            {/* Form Skeleton (Left Column) - (3/5) */}
+            {/* Form Skeleton (Left Column) */}
             <div className="lg:col-span-3 space-y-8 order-2 lg:order-1">
                 {/* Shipping Info Section */}
                 <div>
@@ -357,10 +357,10 @@ const CheckoutPage: React.FC = () => {
               <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
             </div>
           </div>
-          {/* UPDATED: Larger font size for Total Payable */}
+          {/* UPDATED: Reduced font size to text-xl sm:text-2xl to prevent overlapping */}
           <div className="mt-6 flex justify-between items-center">
-            <span className="text-xl font-bold text-stone-900">Total Payable</span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
+            <span className="text-lg font-bold text-stone-900">Total Payable</span>
+            <span className="text-xl sm:text-2xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
