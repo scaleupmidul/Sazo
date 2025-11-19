@@ -227,7 +227,11 @@ const CheckoutPage: React.FC = () => {
 
   // Calculate derived values safely
   const shippingCharge = selectedShippingOption?.charge || 0;
-  const totalPayable = safeCartTotal + shippingCharge;
+  const isOnlinePayment = formData.paymentMethod === 'Online';
+  // If online payment is selected, shipping charge is not added to the total payable
+  const effectiveShippingCharge = isOnlinePayment ? 0 : shippingCharge;
+  const totalPayable = safeCartTotal + effectiveShippingCharge;
+
   const formattedPaymentInfo = useMemo(() => {
       return (safeSettings.onlinePaymentInfo || '').replace(/\n/g, '<br />');
   }, [safeSettings.onlinePaymentInfo]);
@@ -354,7 +358,7 @@ const CheckoutPage: React.FC = () => {
             </div>
             <div className="flex justify-between text-stone-600 border-b border-stone-200 pb-4">
               <span className="font-semibold w-2/3">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
-              <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
+              <span>{isOnlinePayment ? '( ✔ )' : `৳${shippingCharge.toLocaleString('en-IN')}`}</span>
             </div>
           </div>
           
