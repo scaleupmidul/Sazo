@@ -130,7 +130,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
         </div>
 
         {/* Progress Stepper (Desktop Only) */}
-        <div className="hidden sm:block max-w-3xl mx-auto mb-16 animate-fadeIn">
+        <div className="hidden sm:block max-w-3xl mx-auto mb-6 animate-fadeIn">
              <div className="relative flex items-center justify-between">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-stone-100 rounded-full -z-10"></div>
                 {/* Active Bar (25% for 'Ordered') */}
@@ -153,55 +153,20 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                     <span className="text-xs font-medium text-stone-400">Delivered</span>
                 </div>
             </div>
-            <p className="text-center text-xs text-stone-400 mt-6">Estimated delivery: 2-5 business days</p>
         </div>
+        
+        {/* Estimated Delivery - Visible on Mobile & Desktop */}
+        <p className="text-center text-sm font-medium text-black mb-16 animate-fadeIn">
+            Estimated delivery: 2-4 business days
+        </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-fadeInUp">
+        {/* Layout Container: Flex Column on Mobile, Grid on Desktop */}
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-12 animate-fadeInUp">
             
-            {/* Left Column: Products (Clean List) */}
-            <div className="lg:col-span-7 space-y-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
-                    <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
-                        <h3 className="font-bold text-stone-800">Items in your order</h3>
-                        <span className="text-sm text-stone-500">{order.cartItems?.length} items</span>
-                    </div>
-                    <div className="divide-y divide-stone-50">
-                        {(order.cartItems || []).map((item, index) => (
-                            <div key={`${item.id}-${index}`} className="p-6 flex gap-5 items-center">
-                                <div className="w-20 h-24 sm:w-24 sm:h-32 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 border border-stone-100">
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-stone-900 text-base sm:text-lg truncate">{item.name}</h4>
-                                    <div className="flex flex-wrap gap-3 mt-2 text-sm text-stone-500">
-                                        <span className="bg-stone-50 px-2 py-1 rounded">Size: <strong className="text-stone-700">{item.size}</strong></span>
-                                        <span className="bg-stone-50 px-2 py-1 rounded">Qty: <strong className="text-stone-700">{item.quantity}</strong></span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-stone-900 text-lg">৳{(item.price * item.quantity).toLocaleString('en-IN')}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Support Box */}
-                <div className="bg-pink-50 rounded-xl p-6 flex items-start gap-4 border border-pink-100">
-                    <div className="bg-white p-2 rounded-full shadow-sm">
-                        <Home className="w-5 h-5 text-pink-600" />
-                    </div>
-                    <div>
-                         <h4 className="font-bold text-stone-800">Need help with your order?</h4>
-                         <p className="text-sm text-stone-600 mt-1">Contact our support team at <span className="font-semibold text-pink-700">{settings.contactEmail}</span></p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Column: Receipt Style Summary */}
-            <div className="lg:col-span-5 space-y-6">
+            {/* Right Column in logic (Summary) - VISUALLY FIRST on Mobile (order-1) */}
+            <div className="order-1 lg:order-2 lg:col-span-5 space-y-6">
                 <div className="bg-white rounded-2xl shadow-lg border border-stone-100 overflow-hidden relative">
-                    {/* Decorative serrated edge top (CSS trick or keep simple) */}
+                    {/* Decorative serrated edge top */}
                     <div className="h-2 bg-pink-600 w-full"></div>
 
                     <div className="p-6 sm:p-8">
@@ -260,6 +225,46 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                             <Printer className="w-4 h-4" />
                             <span>Print Receipt</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Left Column in logic (Products) - VISUALLY SECOND on Mobile (order-2) */}
+            <div className="order-2 lg:order-1 lg:col-span-7 space-y-8">
+                <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
+                    <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                        <h3 className="font-bold text-stone-800">Items in your order</h3>
+                        <span className="text-sm text-stone-500">{order.cartItems?.length} items</span>
+                    </div>
+                    <div className="divide-y divide-stone-50">
+                        {(order.cartItems || []).map((item, index) => (
+                            <div key={`${item.id}-${index}`} className="p-6 flex gap-5 items-center">
+                                <div className="w-20 h-24 sm:w-24 sm:h-32 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0 border border-stone-100">
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-stone-900 text-base sm:text-lg truncate">{item.name}</h4>
+                                    <div className="flex flex-wrap gap-3 mt-2 text-sm text-stone-500">
+                                        <span className="bg-stone-50 px-2 py-1 rounded">Size: <strong className="text-stone-700">{item.size}</strong></span>
+                                        <span className="bg-stone-50 px-2 py-1 rounded">Qty: <strong className="text-stone-700">{item.quantity}</strong></span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-stone-900 text-lg">৳{(item.price * item.quantity).toLocaleString('en-IN')}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Support Box */}
+                <div className="bg-pink-50 rounded-xl p-6 flex items-start gap-4 border border-pink-100">
+                    <div className="bg-white p-2 rounded-full shadow-sm">
+                        <Home className="w-5 h-5 text-pink-600" />
+                    </div>
+                    <div>
+                         <h4 className="font-bold text-stone-800">Need help with your order?</h4>
+                         <p className="text-sm text-stone-600 mt-1">Contact our support team at <span className="font-semibold text-pink-700">{settings.contactEmail}</span></p>
                     </div>
                 </div>
             </div>
