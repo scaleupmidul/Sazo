@@ -102,6 +102,8 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange, op
 };
 
 const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) => Promise<void>, onClose: () => void }> = ({ product, onSave, onClose }) => {
+    // FIX: Use nullish coalescing (??) instead of logical OR (||) for booleans
+    // because (false || true) evaluates to true, preventing us from setting a product to false.
     const [formData, setFormData] = useState({
         name: product?.name || '',
         category: product?.category || '',
@@ -113,10 +115,10 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
         image1: product?.images[0] || '',
         image2: product?.images[1] || '',
         image3: product?.images[2] || '',
-        isNewArrival: product?.isNewArrival || true,
-        isTrending: product?.isTrending || false,
-        onSale: product?.onSale || false,
-        displayOrder: product?.displayOrder || 1000,
+        isNewArrival: product?.isNewArrival ?? false,
+        isTrending: product?.isTrending ?? false,
+        onSale: product?.onSale ?? false,
+        displayOrder: product?.displayOrder ?? 1000,
     });
     const [isSaving, setIsSaving] = useState(false);
     const [newSize, setNewSize] = useState('');
@@ -269,9 +271,9 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                             </div>
 
                              <div className="flex items-center space-x-4 md:col-span-2">
-                                <label className="text-black"><input type="checkbox" name="isNewArrival" checked={formData.isNewArrival} onChange={handleChange} className="mr-2"/> New Arrival</label>
-                                <label className="text-black"><input type="checkbox" name="isTrending" checked={formData.isTrending} onChange={handleChange} className="mr-2"/> Trending</label>
-                                <label className="text-black"><input type="checkbox" name="onSale" checked={formData.onSale} onChange={handleChange} className="mr-2"/> On Sale</label>
+                                <label className="text-black flex items-center"><input type="checkbox" name="isNewArrival" checked={formData.isNewArrival} onChange={handleChange} className="mr-2"/> New Arrival</label>
+                                <label className="text-black flex items-center"><input type="checkbox" name="isTrending" checked={formData.isTrending} onChange={handleChange} className="mr-2"/> Trending</label>
+                                <label className="text-black flex items-center"><input type="checkbox" name="onSale" checked={formData.onSale} onChange={handleChange} className="mr-2"/> On Sale</label>
                             </div>
                         </div>
                     </div>
@@ -416,16 +418,26 @@ const AdminProductsPage: React.FC = () => {
                         <tr>
                             <th scope="col" className="px-6 py-3">Product Name</th>
                             <th scope="col" className="px-6 py-3">Category</th>
+                            <th scope="col" className="px-6 py-3 text-center">Order</th>
+                            <th scope="col" className="px-6 py-3 text-center">Status</th>
                             <th scope="col" className="px-6 py-3">Price</th>
                             <th scope="col" className="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
-                    {isLoading ? <TableSkeleton cols={4} rows={5} /> : (
+                    {isLoading ? <TableSkeleton cols={6} rows={5} /> : (
                         <tbody>
                             {adminProducts.map(product => (
                                 <tr key={product.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
                                     <td className="px-6 py-4">{product.category}</td>
+                                    <td className="px-6 py-4 text-center font-mono">{product.displayOrder}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex flex-col gap-1 items-center">
+                                            {product.isNewArrival && <span className="px-2 py-0.5 bg-pink-100 text-pink-800 rounded-full text-[10px] font-bold">NEW</span>}
+                                            {product.isTrending && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-bold">TRENDING</span>}
+                                            {!product.isNewArrival && !product.isTrending && <span className="text-gray-400 text-xs">-</span>}
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4">৳{product.price.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
                                         <button onClick={() => handleEdit(product)} className="p-2 text-blue-500 hover:bg-blue-100 rounded-full"><Edit className="w-4 h-4"/></button>
