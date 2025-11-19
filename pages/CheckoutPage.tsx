@@ -21,7 +21,7 @@ const InputField: React.FC<{ label: string; name: string; type?: string; value: 
 );
 
 const CheckoutPageSkeleton: React.FC = () => (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
+    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
         {/* Page Title Box */}
         <div className="h-10 bg-stone-200 rounded w-48 mx-auto mb-8"></div>
         
@@ -317,7 +317,7 @@ const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
+    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
       <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
       
       {/* UPDATED GRID: lg:grid-cols-5 gives Order Summary 40% width (2 cols) and Form 60% width (3 cols) */}
