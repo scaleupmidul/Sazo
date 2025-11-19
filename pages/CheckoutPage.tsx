@@ -1,11 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../store';
 
+// Improved InputField with text-base on mobile to prevent iOS zoom
 const InputField: React.FC<{ label: string; name: string; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; required?: boolean; placeholder?: string; }> = 
 ({ label, name, type = 'text', value, onChange, required = true, placeholder }) => (
     <div className="space-y-1.5">
       <label htmlFor={name} className="text-sm font-medium text-stone-700">{label} {required && <span className="text-red-500">*</span>}</label>
-      <input type={type} id={name} name={name} value={value || ''} onChange={onChange} required={required} placeholder={placeholder} className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-sm bg-white text-black" />
+      <input 
+        type={type} 
+        id={name} 
+        name={name} 
+        value={value || ''} 
+        onChange={onChange} 
+        required={required} 
+        placeholder={placeholder} 
+        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
+      />
     </div>
 );
 
@@ -16,7 +26,7 @@ const CheckoutPageSkeleton: React.FC = () => (
         
         <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-8">
             
-            {/* Order Summary Skeleton (Right Column) - No Card Container */}
+            {/* Order Summary Skeleton (Right Column) */}
             <div className="lg:col-span-1 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
                 <div className="h-7 bg-stone-200 rounded w-1/2 mb-6"></div>
                 <div className="space-y-4">
@@ -49,7 +59,7 @@ const CheckoutPageSkeleton: React.FC = () => (
                 </div>
             </div>
 
-            {/* Form Skeleton (Left Column) - No Card Container */}
+            {/* Form Skeleton (Left Column) */}
             <div className="lg:col-span-2 space-y-8 order-2 lg:order-1">
                 {/* Shipping Info Section */}
                 <div>
@@ -306,15 +316,16 @@ const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
       <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
       <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-8">
         
-        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
-          <h3 className="text-xl font-bold text-stone-900 mb-6">Order Summary</h3>
+        {/* Order Summary Column */}
+        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
+          <h3 className="text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
           
-          {/* Cart Items List */}
-          <div className="space-y-4 mb-6">
+          {/* Cart Items List - Scrollable on mobile to save space */}
+          <div className="space-y-4 mb-6 max-h-60 sm:max-h-none overflow-y-auto pr-1 custom-scrollbar">
             {cart.map((item) => (
               <div key={`${item.id}-${item.size}`} className="flex gap-3">
                 <div className="w-16 aspect-[3.5/4] flex-shrink-0 overflow-hidden rounded-md border border-stone-100">
@@ -339,8 +350,7 @@ const CheckoutPage: React.FC = () => {
               <span>৳{safeCartTotal.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-stone-600 border-b border-stone-200 pb-4">
-              {/* Added truncate to prevent layout shift when shipping text is long */}
-              <span className="font-semibold w-2/3 truncate">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
+              <span className="font-semibold w-2/3">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
               <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
             </div>
           </div>
@@ -350,7 +360,8 @@ const CheckoutPage: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-white p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
+        {/* Checkout Form Column */}
+        <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
           <div>
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4">Shipping Information</h3>
             <div className="space-y-4">
@@ -367,28 +378,30 @@ const CheckoutPage: React.FC = () => {
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Select Delivery Area</h3>
             <div className="space-y-3">
               {safeSettings.shippingOptions.length > 0 ? safeSettings.shippingOptions.map((option) => {
-                 if (!option || !option.id) return null; // Skip invalid options to prevent crash
+                 if (!option || !option.id) return null;
                  const isSelected = formData.shippingOptionId === option.id;
                  return (
                     <div 
                         key={option.id} 
+                        className={`rounded-lg border transition-all duration-200 overflow-hidden ${isSelected ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
                         onClick={() => setFormData(prev => ({ ...prev, shippingOptionId: option.id }))}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${isSelected ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
                     >
-                      <div className="flex items-center justify-between pointer-events-none">
-                        <span className="flex items-center space-x-3">
-                          <input 
+                      <label className="flex items-center w-full p-4 cursor-pointer gap-3">
+                        <input 
                             type="radio" 
                             name="shippingOptionId" 
                             value={option.id} 
                             checked={isSelected} 
-                            onChange={() => {}} // Handled by parent div
-                            className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
-                          />
-                          <span className={`font-semibold text-sm ${isSelected ? 'text-pink-900' : 'text-stone-700'}`}>{option.label || 'Standard Shipping'}</span>
-                        </span>
-                        <span className={`font-bold text-sm ${isSelected ? 'text-pink-700' : 'text-stone-900'}`}>{(option.charge || 0).toLocaleString('en-IN')} ৳</span>
-                      </div>
+                            onChange={handleChange} 
+                            className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 flex-shrink-0" 
+                        />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center flex-wrap gap-2">
+                                <span className="font-semibold text-stone-700 text-sm break-words">{option.label || 'Standard Shipping'}</span>
+                                <span className="font-bold text-stone-900 text-sm flex-shrink-0">{(option.charge || 0).toLocaleString('en-IN')} ৳</span>
+                            </div>
+                        </div>
+                      </label>
                     </div>
                  );
               }) : (
@@ -404,46 +417,32 @@ const CheckoutPage: React.FC = () => {
             <div className="space-y-3">
                {safeSettings.codEnabled && (
                   <div 
+                    className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'COD' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${formData.paymentMethod === 'COD' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
                   >
-                    <div className="flex items-center space-x-3 pointer-events-none">
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
-                        value="COD" 
-                        checked={formData.paymentMethod === 'COD'} 
-                        onChange={() => {}}
-                        className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
-                      />
+                    <label className="flex items-start space-x-3 p-4 cursor-pointer">
+                      <input type="radio" name="paymentMethod" value="COD" checked={formData.paymentMethod === 'COD'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <span className={`font-semibold text-sm ${formData.paymentMethod === 'COD' ? 'text-pink-900' : 'text-stone-700'}`}>Cash on Delivery (COD)</span>
-                        <p className="text-xs text-stone-500">Pay upon receiving the product</p>
+                        <span className="font-semibold text-stone-700 text-sm block">Cash on Delivery (COD)</span>
+                        <p className="text-xs text-stone-500 mt-0.5">Pay upon receiving the product</p>
                       </div>
-                    </div>
+                    </label>
                   </div>
                 )}
                 {safeSettings.onlinePaymentEnabled && (
                   <div 
+                    className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${formData.paymentMethod === 'Online' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
                   >
-                    <div className="flex items-center space-x-3 pointer-events-none">
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
-                        value="Online" 
-                        checked={formData.paymentMethod === 'Online'} 
-                        onChange={() => {}}
-                        className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
-                      />
-                       <div>
-                         <span className={`font-semibold text-sm ${formData.paymentMethod === 'Online' ? 'text-pink-900' : 'text-stone-700'}`}>Online Payment</span>
+                    <label className="flex items-start space-x-3 p-4 cursor-pointer">
+                      <input type="radio" name="paymentMethod" value="Online" checked={formData.paymentMethod === 'Online'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 mt-0.5 flex-shrink-0" />
+                       <div className="min-w-0">
+                         <span className="font-semibold text-stone-700 text-sm block">Online Payment</span>
                          {safeOnlinePaymentMethods.length > 0 && (
-                            <p className="text-xs text-stone-500">{safeOnlinePaymentMethods.join(' / ')}</p>
+                            <p className="text-xs text-stone-500 mt-0.5 truncate">{safeOnlinePaymentMethods.join(' / ')}</p>
                          )}
                        </div>
-                    </div>
+                    </label>
                   </div>
                 )}
                  {noPaymentMethodAvailable && (
@@ -455,9 +454,8 @@ const CheckoutPage: React.FC = () => {
           </div>
             
           {formData.paymentMethod === 'Online' && safeSettings.onlinePaymentEnabled && (
-            // Removed animate-scaleIn for stability
-            <div className="mt-6 pt-6 border-t border-stone-200 bg-pink-50/50 rounded-xl shadow-inner">
-              <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800">
+            <div className="mt-6 pt-6 border-t border-stone-200 animate-scaleIn bg-pink-50/50 rounded-xl shadow-inner">
+              <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800 mb-4">
                 <SafeHTML 
                     content={formattedPaymentInfo} 
                     style={{
@@ -467,15 +465,31 @@ const CheckoutPage: React.FC = () => {
                 />
               </div>
 
-              <div className="px-6 pt-4 pb-6 space-y-4">
+              <div className="px-4 sm:px-6 pb-6 space-y-4">
                 <div className="space-y-1">
                   <label htmlFor="paymentNumber" className="text-sm font-medium text-stone-700">Your sending number <span className="text-red-500">*</span></label>
-                  <input type="tel" id="paymentNumber" name="paymentNumber" value={formData.paymentNumber} onChange={handleChange} required={formData.paymentMethod === 'Online'} placeholder="e.g., 017XX XXX XXX" className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-sm bg-white text-black" />
+                  <input 
+                    type="tel" 
+                    id="paymentNumber" 
+                    name="paymentNumber" 
+                    value={formData.paymentNumber} 
+                    onChange={handleChange} 
+                    required={formData.paymentMethod === 'Online'} 
+                    placeholder="e.g., 017XX XXX XXX" 
+                    className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
+                  />
                 </div>
 
                 <div className="space-y-1">
                     <label htmlFor="onlinePaymentMethod" className="text-sm font-medium text-stone-700">Payment Method <span className="text-red-500">*</span></label>
-                    <select id="onlinePaymentMethod" name="onlinePaymentMethod" value={formData.onlinePaymentMethod} onChange={handleChange} required={formData.paymentMethod === 'Online'} className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-sm bg-white text-black">
+                    <select 
+                        id="onlinePaymentMethod" 
+                        name="onlinePaymentMethod" 
+                        value={formData.onlinePaymentMethod} 
+                        onChange={handleChange} 
+                        required={formData.paymentMethod === 'Online'} 
+                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black"
+                    >
                         <option value="Choose" disabled>Choose</option>
                         {safeOnlinePaymentMethods.map(method => (
                            <option key={method} value={method}>{method}</option>
@@ -485,7 +499,16 @@ const CheckoutPage: React.FC = () => {
 
                 <div className="space-y-1">
                     <label htmlFor="transactionId" className="text-sm font-medium text-stone-700">Transaction ID <span className="text-red-500">*</span></label>
-                    <input type="text" id="transactionId" name="transactionId" value={formData.transactionId} onChange={handleChange} required={formData.paymentMethod === 'Online'} placeholder="e.g., 9K8G7F6H5J" className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-sm bg-white text-black" />
+                    <input 
+                        type="text" 
+                        id="transactionId" 
+                        name="transactionId" 
+                        value={formData.transactionId} 
+                        onChange={handleChange} 
+                        required={formData.paymentMethod === 'Online'} 
+                        placeholder="e.g., 9K8G7F6H5J" 
+                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
+                    />
                 </div>
               </div>
             </div>
@@ -494,7 +517,7 @@ const CheckoutPage: React.FC = () => {
           <button 
             type="submit" 
             disabled={!isFormValid} 
-            className={`w-full text-white text-lg font-bold px-6 py-3 rounded-full transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95 mt-6 ${isFormValid ? 'bg-pink-600 hover:bg-pink-700 cursor-pointer' : 'bg-pink-300 cursor-not-allowed'}`}
+            className={`w-full text-white text-lg font-bold px-6 py-3.5 rounded-full transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95 mt-6 ${isFormValid ? 'bg-pink-600 hover:bg-pink-700 cursor-pointer' : 'bg-pink-300 cursor-not-allowed'}`}
           >
             <span>Place Order</span>
           </button>
