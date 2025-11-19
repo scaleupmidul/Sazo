@@ -23,7 +23,7 @@ const ThankYouPageSkeleton: React.FC = () => (
 );
 
 const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
-    const { navigate, notify } = useAppStore();
+    const { navigate, notify, settings } = useAppStore();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -142,7 +142,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-stone-800">Order Placed Successfully</h2>
-                            <p className="text-stone-600 text-sm">Estimated delivery: 3-5 business days</p>
+                            <p className="text-stone-600 text-sm">Estimated delivery: 2-5 business days</p>
                         </div>
                     </div>
                     <div className="p-6">
@@ -260,7 +260,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                 </div>
                 
                 <div className="bg-pink-50 rounded-xl p-4 text-center print:hidden">
-                     <p className="text-xs text-pink-800 font-medium">Need help? Contact us at <span className="underline cursor-pointer">support@sazo.com</span></p>
+                     <p className="text-xs text-pink-800 font-medium">Need help? Contact us at <span className="underline cursor-pointer">{settings.contactEmail}</span></p>
                 </div>
             </div>
         </div>
