@@ -418,7 +418,7 @@ const AdminProductsPage: React.FC = () => {
                         <tr>
                             <th scope="col" className="px-6 py-3">Product Name</th>
                             <th scope="col" className="px-6 py-3">Category</th>
-                            <th scope="col" className="px-6 py-3 text-center">Order</th>
+                            <th scope="col" className="px-6 py-3 text-center">Level</th>
                             <th scope="col" className="px-6 py-3 text-center">Status</th>
                             <th scope="col" className="px-6 py-3">Price</th>
                             <th scope="col" className="px-6 py-3 text-right">Actions</th>
