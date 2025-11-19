@@ -21,11 +21,11 @@ const InputField: React.FC<{ label: string; name: string; type?: string; value: 
 );
 
 const CheckoutPageSkeleton: React.FC = () => (
-    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
+    <main className="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
         {/* Page Title Box */}
         <div className="h-10 bg-stone-200 rounded w-48 mx-auto mb-8"></div>
         
-        <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-10 xl:gap-16">
             
             {/* Order Summary Skeleton (Right Column - Wider) */}
             <div className="lg:col-span-2 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
@@ -317,13 +317,13 @@ const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
+    <main className="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
       <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
       
-      {/* UPDATED GRID: lg:grid-cols-5 gives Order Summary 40% width (2 cols) and Form 60% width (3 cols) */}
-      <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8">
+      {/* UPDATED GRID: Increased gap for wider screens (lg:gap-10 xl:gap-16) */}
+      <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-10 xl:gap-16">
         
-        {/* Order Summary Column (Wider - 2 columns) */}
+        {/* Order Summary Column (2 columns - 40%) */}
         <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
           <h3 className="text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
           
@@ -364,7 +364,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Checkout Form Column (3 columns) */}
+        {/* Checkout Form Column (3 columns - 60%) */}
         <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-6 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
           <div>
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4">Shipping Information</h3>
