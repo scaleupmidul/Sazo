@@ -110,6 +110,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
     const subtotal = (order.cartItems || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const shipping = order.total - subtotal;
     const displayOrderId = order.orderId || order.id;
+    const isOnlinePayment = order.paymentMethod === 'Online';
 
     return (
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-20">
@@ -202,7 +203,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                             </div>
                             <div className="flex justify-between text-stone-600">
                                 <span>Shipping</span>
-                                <span className="font-medium">৳{shipping.toLocaleString('en-IN')}</span>
+                                <span className="font-medium">{isOnlinePayment ? '( ✔ )' : `৳${shipping.toLocaleString('en-IN')}`}</span>
                             </div>
                         </div>
                         
