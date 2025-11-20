@@ -57,6 +57,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
         if (order) {
             const shippingCharge = order.total - (order.cartItems || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
             window.dataLayer = window.dataLayer || [];
+            
             window.dataLayer.push({
                 event: 'purchase',
                 ecommerce: {
@@ -71,6 +72,23 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                         quantity: item.quantity,
                         item_variant: item.size
                     }))
+                },
+                // Added customer information for GTM
+                customer: {
+                    name: order.customerName,
+                    phone: order.phone,
+                    address: order.address,
+                    city: order.city,
+                    paymentMethod: order.paymentMethod
+                },
+                // Standard user_data structure for Enhanced Conversions
+                user_data: {
+                    phone_number: order.phone,
+                    address: {
+                        first_name: order.customerName,
+                        street: order.address,
+                        city: order.city
+                    }
                 }
             });
         }
@@ -280,3 +298,4 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
 };
 
 export default ThankYouPage;
+   
