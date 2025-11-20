@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
@@ -40,15 +41,14 @@ const App: React.FC = () => {
   const isAdminAuthenticated = useAppStore(state => state.isAdminAuthenticated);
   const showWhatsAppButton = useAppStore(state => state.settings.showWhatsAppButton);
 
-  // Normalize path to remove trailing slashes (e.g., '/contact/' -> '/contact')
-  // This prevents routing issues if a user manually types a URL with a slash.
-  const normalizedPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
-
   useEffect(() => {
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
+    const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1];
         // FIX: This guard prevents an infinite re-render loop.
+        // It checks if the currently selected product already matches the one in the URL.
+        // This is crucial because the `products` array is a new instance on each fetch,
+        // which would otherwise cause this effect to re-run and re-set the state continuously.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -59,23 +59,23 @@ const App: React.FC = () => {
             setSelectedProduct(null);
         }
     }
-  }, [normalizedPath, products, selectedProduct, setSelectedProduct]);
+  }, [path, products, selectedProduct, setSelectedProduct]);
   
   useEffect(() => {
     const BASE_TITLE = 'SAZO';
     let pageTitle = BASE_TITLE; // Default title
 
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
-    const thankYouMatch = normalizedPath.match(/^\/thank-you\/(.+)$/);
+    const productMatch = path.match(/^\/product\/(.+)$/);
+    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
 
     if (productMatch && selectedProduct) {
         pageTitle = `${selectedProduct.name} - ${BASE_TITLE}`;
     } else if (thankYouMatch) {
         pageTitle = `Order Confirmed! - ${BASE_TITLE}`;
-    } else if (normalizedPath.startsWith('/admin')) {
+    } else if (path.startsWith('/admin')) {
         pageTitle = `Admin Panel - ${BASE_TITLE}`;
     } else {
-        switch (normalizedPath) {
+        switch (path) {
             case '/':
                 pageTitle = `${BASE_TITLE} - Elegant Women's Wear`;
                 break;
@@ -98,35 +98,39 @@ const App: React.FC = () => {
     }
     
     document.title = pageTitle;
-  }, [normalizedPath, selectedProduct]);
+  }, [path, selectedProduct]);
   
   useEffect(() => {
-    const adminPageCheck = normalizedPath.startsWith('/admin') && normalizedPath !== '/admin/login';
+    const adminPageCheck = path.startsWith('/admin') && path !== '/admin/login';
     if (adminPageCheck && !isAdminAuthenticated) {
         navigate('/admin/login');
     }
-  }, [normalizedPath, isAdminAuthenticated, navigate]);
+  }, [path, isAdminAuthenticated, navigate]);
 
 
-  const isCustomerPage = !normalizedPath.startsWith('/admin');
+  const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
-     if (normalizedPath === '/admin/dashboard') return <AdminDashboardPage />;
-     if (normalizedPath === '/admin/products') return <AdminProductsPage />;
-     if (normalizedPath === '/admin/orders') return <AdminOrdersPage />;
-     if (normalizedPath === '/admin/messages') return <AdminMessagesPage />;
-     if (normalizedPath === '/admin/settings') return <AdminSettingsPage />;
-     if (normalizedPath === '/admin/payment-info') return <AdminPaymentInfoPage />;
+     // This function returns the component for a the current admin path, to be rendered inside AdminLayout.
+     if (path === '/admin/dashboard') return <AdminDashboardPage />;
+     if (path === '/admin/products') return <AdminProductsPage />;
+     if (path === '/admin/orders') return <AdminOrdersPage />;
+     if (path === '/admin/messages') return <AdminMessagesPage />;
+     if (path === '/admin/settings') return <AdminSettingsPage />;
+     if (path === '/admin/payment-info') return <AdminPaymentInfoPage />;
      
+     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
-    if (normalizedPath === '/admin/login') {
+    // Standalone admin login page (no layout)
+    if (path === '/admin/login') {
       return <AdminLoginPage />;
     }
 
-    if (normalizedPath.startsWith('/admin')) {
+    // All other admin pages are wrapped in the layout
+    if (path.startsWith('/admin')) {
       return (
         <AdminLayout>
             {renderAdminPageContent()}
@@ -134,18 +138,19 @@ const App: React.FC = () => {
       );
     }
     
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
+    // Customer-facing pages
+    const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
       return <ProductDetailsPage />;
     }
 
-    const thankYouMatch = normalizedPath.match(/^\/thank-you\/(.+)$/);
+    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
     if (thankYouMatch) {
         const orderId = thankYouMatch[1];
         return <ThankYouPage orderId={orderId} />;
     }
 
-    switch (normalizedPath) {
+    switch (path) {
       case '/':
         return <HomePage />;
       case '/shop':
@@ -159,6 +164,7 @@ const App: React.FC = () => {
       case '/policy':
         return <PolicyPage />;
       default:
+        // For any other path, show the home page. A 404 page could be added here.
         return <HomePage />;
     }
   };
@@ -170,19 +176,30 @@ const App: React.FC = () => {
           .sazo-logo {
             font-family: 'Poppins', sans-serif;
           }
+
+          /* Hide scrollbar for IE, Edge */
           body { 
             font-family: 'Inter', sans-serif; 
             color: #444;
-            overflow-x: hidden;
-            -ms-overflow-style: none;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            -ms-overflow-style: none;  /* IE and Edge */
           }
-          html { scrollbar-width: none; }
-          ::-webkit-scrollbar { display: none; }
+
+          /* Hide scrollbar for Firefox */
+          html {
+              scrollbar-width: none;
+          }
+          
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          ::-webkit-scrollbar {
+              display: none;
+          }
 
           h1, .font-display-xl { font-weight: 700; }
           h2, .font-display-lg { font-weight: 600; }
           h3, .font-display-md { font-weight: 600; }
 
+          /* Override browser autofill styles */
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
           input:-webkit-autofill:focus, 
@@ -203,12 +220,18 @@ const App: React.FC = () => {
           }
           .animate-scaleIn { animation: scaleIn 0.2s ease-out forwards; }
 
+          @keyframes slideInLeft {
+              from { transform: translateX(-100%); }
+              to { transform: translateX(0); }
+          }
+
           @keyframes fadeIn {
               from { opacity: 0; }
               to { opacity: 1; }
           }
           .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
 
+          /* New Animations for Hero Slider */
           @keyframes fadeInUp {
               from { opacity: 0; transform: translateY(20px); }
               to { opacity: 1; transform: translateY(0); }
@@ -216,7 +239,9 @@ const App: React.FC = () => {
           .animate-fadeInUp { animation: fadeInUp 0.6s ease-out both; }
 
           .text-shadow { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-          
+          .text-shadow-md { text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+
+          /* WhatsApp Pulse Animation */
           @keyframes pulse-whatsapp {
             0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(219, 39, 119, 0); }
