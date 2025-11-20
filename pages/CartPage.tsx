@@ -1,4 +1,5 @@
 
+
 import React, { useEffect } from 'react';
 import { CartItem } from '../types';
 import { ShoppingCart, Truck, XCircle, ArrowLeft } from 'lucide-react';
@@ -53,9 +54,7 @@ const CartPage: React.FC = () => {
                     quantity: item.quantity,
                     item_variant: item.size
                 }))
-            },
-            page_location: window.location.href,
-            page_path: window.location.pathname
+            }
         });
     }
   }, []);
