@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -188,7 +189,9 @@ export const useAppStore = create<AppState>()(
                         quantity: quantity,
                         item_variant: size
                     }]
-                }
+                },
+                page_location: 'https://www.sazobd.shop/cart',
+                page_path: '/cart'
             });
 
             set({ cart: newCart });
