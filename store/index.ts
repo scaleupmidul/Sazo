@@ -1,3 +1,5 @@
+
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -176,6 +178,8 @@ export const useAppStore = create<AppState>()(
             
             // Push GA4 add_to_cart event
             window.dataLayer = window.dataLayer || [];
+            // Clear the previous ecommerce object to prevent data mixing (GA4 Best Practice)
+            window.dataLayer.push({ ecommerce: null });
             window.dataLayer.push({
                 event: 'add_to_cart',
                 ecommerce: {
@@ -189,8 +193,10 @@ export const useAppStore = create<AppState>()(
                         item_variant: size
                     }]
                 },
+                // Force overrides for page location
                 page_location: 'https://www.sazobd.shop/cart',
-                page_path: '/cart'
+                page_path: '/cart',
+                page_title: 'Your Shopping Cart - SAZO'
             });
 
             set({ cart: newCart });
@@ -210,6 +216,7 @@ export const useAppStore = create<AppState>()(
 
             if (quantityDifference > 0 && productDetails) { // Item quantity increased
                 window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ ecommerce: null });
                 window.dataLayer.push({
                     event: 'add_to_cart',
                     ecommerce: {
@@ -222,10 +229,13 @@ export const useAppStore = create<AppState>()(
                             quantity: quantityDifference, // track the number of items added
                             item_variant: size
                         }]
-                    }
+                    },
+                    page_location: 'https://www.sazobd.shop/cart',
+                    page_path: '/cart'
                 });
             } else if (quantityDifference < 0 && productDetails) { // Item quantity decreased or removed
                  window.dataLayer = window.dataLayer || [];
+                 window.dataLayer.push({ ecommerce: null });
                  window.dataLayer.push({
                     event: 'remove_from_cart',
                     ecommerce: {
@@ -238,7 +248,9 @@ export const useAppStore = create<AppState>()(
                             quantity: -quantityDifference, // track the number of items removed
                             item_variant: size
                         }]
-                    }
+                    },
+                    page_location: 'https://www.sazobd.shop/cart',
+                    page_path: '/cart'
                 });
             }
 
