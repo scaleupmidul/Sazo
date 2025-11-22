@@ -11,10 +11,12 @@ export interface Product {
   colors: string[];
   sizes: string[];
   isNewArrival: boolean;
+  newArrivalDisplayOrder?: number; // Separate order for New Arrivals
   isTrending: boolean;
+  trendingDisplayOrder?: number; // Separate order for Trending
   onSale: boolean;
   images: string[];
-  displayOrder: number; // Lower number appears first
+  displayOrder: number; // Keep for backward compatibility or generic sort
 }
 
 export interface CartItem {
