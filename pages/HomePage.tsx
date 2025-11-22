@@ -42,22 +42,25 @@ const HomePage: React.FC = () => {
   };
 
   // Explicitly sort products by their specific displayOrder on the frontend
-  // Using ?? 1000 ensures that 0 is treated as a valid high-priority order
-  // Secondary sort by ID descending ensures newest products come first when displayOrder is equal
+  // Using || 1000 ensures that 0, null, or undefined are all treated as 1000 (default/last)
+  // This fixes the issue where an accidental '0' would come before '1' or '2'
   const allNewArrivals = products
     .filter(p => p.isNewArrival)
     .sort((a, b) => {
-        const orderA = a.newArrivalDisplayOrder ?? 1000;
-        const orderB = b.newArrivalDisplayOrder ?? 1000;
+        const orderA = a.newArrivalDisplayOrder || 1000;
+        const orderB = b.newArrivalDisplayOrder || 1000;
+        
         if (orderA !== orderB) return orderA - orderB;
+        // Secondary sort by ID descending ensures newest products come first when displayOrder is equal
         return b.id.localeCompare(a.id);
     });
     
   const allTrendingProducts = products
     .filter(p => p.isTrending)
     .sort((a, b) => {
-        const orderA = a.trendingDisplayOrder ?? 1000;
-        const orderB = b.trendingDisplayOrder ?? 1000;
+        const orderA = a.trendingDisplayOrder || 1000;
+        const orderB = b.trendingDisplayOrder || 1000;
+        
         if (orderA !== orderB) return orderA - orderB;
         return b.id.localeCompare(a.id);
     });
