@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../../types';
 import { Plus, Edit, Trash2, Search, LoaderCircle, X } from 'lucide-react';
@@ -102,7 +103,8 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange, op
 };
 
 const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) => Promise<void>, onClose: () => void }> = ({ product, onSave, onClose }) => {
-    // Initialize with default 1000 if values are missing or 0
+    // Initialize form data
+    // For displayOrder fields: if they are undefined, 0, or 1000, initialize as empty string to show placeholder
     const [formData, setFormData] = useState({
         name: product?.name || '',
         category: product?.category || '',
@@ -115,9 +117,9 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
         image2: product?.images[1] || '',
         image3: product?.images[2] || '',
         isNewArrival: product?.isNewArrival ?? false,
-        newArrivalDisplayOrder: product?.newArrivalDisplayOrder || 1000,
+        newArrivalDisplayOrder: (!product?.newArrivalDisplayOrder || product.newArrivalDisplayOrder === 1000) ? '' : product.newArrivalDisplayOrder,
         isTrending: product?.isTrending ?? false,
-        trendingDisplayOrder: product?.trendingDisplayOrder || 1000,
+        trendingDisplayOrder: (!product?.trendingDisplayOrder || product.trendingDisplayOrder === 1000) ? '' : product.trendingDisplayOrder,
         onSale: product?.onSale ?? false,
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -158,10 +160,10 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
             sizes: formData.sizes,
             images: [formData.image1, formData.image2, formData.image3].filter(Boolean),
             isNewArrival: formData.isNewArrival,
-            // Ensure 0 or empty input is saved as 1000 (default)
+            // Ensure empty input or 0 is saved as 1000 (default)
             newArrivalDisplayOrder: Number(formData.newArrivalDisplayOrder) || 1000,
             isTrending: formData.isTrending,
-            // Ensure 0 or empty input is saved as 1000 (default)
+            // Ensure empty input or 0 is saved as 1000 (default)
             trendingDisplayOrder: Number(formData.trendingDisplayOrder) || 1000,
             onSale: formData.onSale,
         };
@@ -461,30 +463,37 @@ const AdminProductsPage: React.FC = () => {
                     </thead>
                     {isLoading ? <TableSkeleton cols={6} rows={5} /> : (
                         <tbody>
-                            {adminProducts.map(product => (
-                                <tr key={product.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
-                                    <td className="px-6 py-4">{product.category}</td>
-                                    <td className="px-6 py-4 text-center font-mono">
-                                        <div className="text-xs space-y-1">
-                                            {product.isNewArrival && <div>New: {product.newArrivalDisplayOrder || 1000}</div>}
-                                            {product.isTrending && <div>Trend: {product.trendingDisplayOrder || 1000}</div>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <div className="flex flex-col gap-1 items-center">
-                                            {product.isNewArrival && <span className="px-2 py-0.5 bg-pink-100 text-pink-800 rounded-full text-[10px] font-bold">NEW</span>}
-                                            {product.isTrending && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-bold">TRENDING</span>}
-                                            {!product.isNewArrival && !product.isTrending && <span className="text-gray-400 text-xs">-</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">৳{product.price.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(product)} className="p-2 text-blue-500 hover:bg-blue-100 rounded-full"><Edit className="w-4 h-4"/></button>
-                                        <button onClick={() => handleDelete(product.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 className="w-4 h-4"/></button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {adminProducts.map(product => {
+                                // Helper to safely get display order for the table view
+                                const getOrderDisplay = (val: number | undefined) => {
+                                    if (val === undefined || val === null || val === 0) return 1000;
+                                    return val;
+                                };
+                                return (
+                                    <tr key={product.id} className="bg-white border-b hover:bg-gray-50">
+                                        <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
+                                        <td className="px-6 py-4">{product.category}</td>
+                                        <td className="px-6 py-4 text-center font-mono">
+                                            <div className="text-xs space-y-1">
+                                                {product.isNewArrival && <div>New: {getOrderDisplay(product.newArrivalDisplayOrder)}</div>}
+                                                {product.isTrending && <div>Trend: {getOrderDisplay(product.trendingDisplayOrder)}</div>}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex flex-col gap-1 items-center">
+                                                {product.isNewArrival && <span className="px-2 py-0.5 bg-pink-100 text-pink-800 rounded-full text-[10px] font-bold">NEW</span>}
+                                                {product.isTrending && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-bold">TRENDING</span>}
+                                                {!product.isNewArrival && !product.isTrending && <span className="text-gray-400 text-xs">-</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">৳{product.price.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-right space-x-2">
+                                            <button onClick={() => handleEdit(product)} className="p-2 text-blue-500 hover:bg-blue-100 rounded-full"><Edit className="w-4 h-4"/></button>
+                                            <button onClick={() => handleDelete(product.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 className="w-4 h-4"/></button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     )}
                 </table>
