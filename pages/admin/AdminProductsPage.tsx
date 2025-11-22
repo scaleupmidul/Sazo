@@ -102,8 +102,7 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange, op
 };
 
 const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) => Promise<void>, onClose: () => void }> = ({ product, onSave, onClose }) => {
-    // FIX: Use nullish coalescing (??) instead of logical OR (||) for booleans
-    // because (false || true) evaluates to true, preventing us from setting a product to false.
+    // Initialize with default 1000 if values are missing or 0
     const [formData, setFormData] = useState({
         name: product?.name || '',
         category: product?.category || '',
@@ -116,9 +115,9 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
         image2: product?.images[1] || '',
         image3: product?.images[2] || '',
         isNewArrival: product?.isNewArrival ?? false,
-        newArrivalDisplayOrder: product?.newArrivalDisplayOrder ?? 1000,
+        newArrivalDisplayOrder: product?.newArrivalDisplayOrder || 1000,
         isTrending: product?.isTrending ?? false,
-        trendingDisplayOrder: product?.trendingDisplayOrder ?? 1000,
+        trendingDisplayOrder: product?.trendingDisplayOrder || 1000,
         onSale: product?.onSale ?? false,
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -159,9 +158,11 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
             sizes: formData.sizes,
             images: [formData.image1, formData.image2, formData.image3].filter(Boolean),
             isNewArrival: formData.isNewArrival,
-            newArrivalDisplayOrder: Number(formData.newArrivalDisplayOrder),
+            // Ensure 0 or empty input is saved as 1000 (default)
+            newArrivalDisplayOrder: Number(formData.newArrivalDisplayOrder) || 1000,
             isTrending: formData.isTrending,
-            trendingDisplayOrder: Number(formData.trendingDisplayOrder),
+            // Ensure 0 or empty input is saved as 1000 (default)
+            trendingDisplayOrder: Number(formData.trendingDisplayOrder) || 1000,
             onSale: formData.onSale,
         };
         await onSave(product ? { ...finalData, id: product.id } : finalData);
