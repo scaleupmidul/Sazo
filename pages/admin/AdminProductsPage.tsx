@@ -272,14 +272,14 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                     </label>
                                     {formData.isNewArrival && (
                                         <div className="flex items-center gap-2 animate-fadeIn">
-                                            <label className="text-xs text-gray-500">Order (1=First):</label>
+                                            <label className="text-xs text-gray-500">Pos:</label>
                                             <input 
                                                 type="number" 
                                                 name="newArrivalDisplayOrder" 
                                                 value={formData.newArrivalDisplayOrder} 
                                                 onChange={handleChange} 
-                                                className="w-20 p-1 text-sm border rounded bg-white text-black"
-                                                placeholder="1000"
+                                                className="w-16 p-1 text-sm border rounded bg-white text-black"
+                                                placeholder="Auto"
                                             />
                                         </div>
                                     )}
@@ -292,14 +292,14 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                     </label>
                                     {formData.isTrending && (
                                         <div className="flex items-center gap-2 animate-fadeIn">
-                                            <label className="text-xs text-gray-500">Order (1=First):</label>
+                                            <label className="text-xs text-gray-500">Pos:</label>
                                             <input 
                                                 type="number" 
                                                 name="trendingDisplayOrder" 
                                                 value={formData.trendingDisplayOrder} 
                                                 onChange={handleChange} 
-                                                className="w-20 p-1 text-sm border rounded bg-white text-black"
-                                                placeholder="1000"
+                                                className="w-16 p-1 text-sm border rounded bg-white text-black"
+                                                placeholder="Auto"
                                             />
                                         </div>
                                     )}
@@ -466,7 +466,7 @@ const AdminProductsPage: React.FC = () => {
                             {adminProducts.map(product => {
                                 // Helper to safely get display order for the table view
                                 const getOrderDisplay = (val: number | undefined) => {
-                                    if (val === undefined || val === null || val === 0) return 1000;
+                                    if (val === undefined || val === null || val === 0 || val === 1000) return '-';
                                     return val;
                                 };
                                 return (
