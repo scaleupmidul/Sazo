@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../store';
+import { LoaderCircle } from 'lucide-react';
 
 // Improved InputField with text-base on mobile to prevent iOS zoom
 const InputField: React.FC<{ label: string; name: string; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; required?: boolean; placeholder?: string; }> = 
@@ -117,6 +118,7 @@ const SafeHTML: React.FC<{ content: string; style?: React.CSSProperties }> = ({ 
 
 const CheckoutPage: React.FC = () => {
   const { cart, cartTotal, navigate, clearCart, notify, addOrder, settings: storeSettings, loading } = useAppStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Robustly handle settings to prevent crashes if data is missing or malformed
   const safeSettings = useMemo(() => {
@@ -275,6 +277,10 @@ const CheckoutPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Prevent multiple clicks
+    if (isSubmitting) return;
+
     if (!isFormValid) {
         notify("Please fill in all required fields.", "error");
         return;
@@ -283,6 +289,8 @@ const CheckoutPage: React.FC = () => {
       notify("Your cart is empty. Cannot place an order.", "error");
       return;
     }
+
+    setIsSubmitting(true);
 
     const paymentInfo = {
         paymentMethod: formData.paymentMethod as 'COD' | 'Online',
@@ -317,6 +325,7 @@ const CheckoutPage: React.FC = () => {
     } catch (error: any) {
         console.error("Order creation failed:", error);
         notify(error.message || "Failed to place order. Please try again.", "error");
+        setIsSubmitting(false);
     }
   };
 
@@ -524,10 +533,17 @@ const CheckoutPage: React.FC = () => {
 
           <button 
             type="submit" 
-            disabled={!isFormValid} 
-            className={`w-full text-white text-lg font-bold px-6 py-3.5 rounded-full transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95 mt-6 ${isFormValid ? 'bg-pink-600 hover:bg-pink-700 cursor-pointer' : 'bg-pink-300 cursor-not-allowed'}`}
+            disabled={!isFormValid || isSubmitting} 
+            className={`w-full text-white text-lg font-bold px-6 py-3.5 rounded-full transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95 mt-6 ${isFormValid && !isSubmitting ? 'bg-pink-600 hover:bg-pink-700 cursor-pointer' : 'bg-pink-300 cursor-not-allowed'}`}
           >
-            <span>Place Order</span>
+            {isSubmitting ? (
+                <>
+                  <LoaderCircle className="w-5 h-5 animate-spin" />
+                  <span>Processing...</span>
+                </>
+             ) : (
+                <span>Place Order</span>
+             )}
           </button>
         </form>
 
