@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard';
 import HeroSlider from '../components/HeroSlider';
 import CategoryCard from '../components/CategoryCard';
 import { useAppStore } from '../store';
+import { Product } from '../types';
 
 const SectionTitle: React.FC<{ title: string }> = ({ title }) => (
   <h2 className="text-3xl sm:text-4xl text-center text-stone-900 mb-8 sm:mb-12">
@@ -42,37 +43,67 @@ const HomePage: React.FC = () => {
     return category ? category.image : 'https://picsum.photos/seed/sazo-default-category/600/800';
   };
 
-  // Helper to normalize display order.
-  // Treats 0, undefined, null, or NaN as 1000 (default/low priority).
-  // This ensures explicitly numbered items (1, 2, 3...) always appear first.
-  const getDisplayOrder = (val: number | undefined | null) => {
-      if (val === undefined || val === null) return 1000;
-      const num = Number(val);
-      // We treat 0 as "not set" because the UI says "1=First"
-      if (isNaN(num) || num === 0) return 1000;
-      return num;
+  // Helper to interleave fixed-position products with flow products
+  const getSortedProducts = (items: Product[], key: 'newArrivalDisplayOrder' | 'trendingDisplayOrder') => {
+      const PINNED_THRESHOLD = 1000;
+      const pinned: { product: Product, order: number }[] = [];
+      const flow: Product[] = [];
+
+      items.forEach(p => {
+          let val = p[key];
+          // Normalize 0, null, undefined to 1000
+          if (val === undefined || val === null || val === 0) val = PINNED_THRESHOLD;
+          const order = Number(val);
+          
+          if (order < PINNED_THRESHOLD) {
+              pinned.push({ product: p, order });
+          } else {
+              flow.push(p);
+          }
+      });
+
+      // Sort flow by ID Desc (Newest first)
+      flow.sort((a, b) => b.id.localeCompare(a.id));
+      
+      // Sort pinned by Order Asc
+      pinned.sort((a, b) => a.order - b.order);
+
+      const result: Product[] = [];
+      let flowIndex = 0;
+      const total = items.length;
+      let currentPos = 1;
+
+      // Fill slots 1..N
+      while(result.length < total) {
+          // If current position is claimed by a pinned item (or we passed it)
+          if (pinned.length > 0 && pinned[0].order <= currentPos) {
+              result.push(pinned.shift()!.product);
+          } 
+          // Otherwise fill with flow item
+          else if (flowIndex < flow.length) {
+              result.push(flow[flowIndex]);
+              flowIndex++;
+          } 
+          // If flow exhausted, dump remaining pinned
+          else if (pinned.length > 0) {
+               result.push(pinned.shift()!.product);
+          } else {
+              break; 
+          }
+          currentPos++;
+      }
+      return result;
   };
 
-  const allNewArrivals = products
-    .filter(p => p.isNewArrival)
-    .sort((a, b) => {
-        const orderA = getDisplayOrder(a.newArrivalDisplayOrder);
-        const orderB = getDisplayOrder(b.newArrivalDisplayOrder);
-        
-        if (orderA !== orderB) return orderA - orderB;
-        // Secondary sort by ID descending ensures newest products come first when displayOrder is equal
-        return b.id.localeCompare(a.id);
-    });
+  const allNewArrivals = getSortedProducts(
+      products.filter(p => p.isNewArrival), 
+      'newArrivalDisplayOrder'
+  );
     
-  const allTrendingProducts = products
-    .filter(p => p.isTrending)
-    .sort((a, b) => {
-        const orderA = getDisplayOrder(a.trendingDisplayOrder);
-        const orderB = getDisplayOrder(b.trendingDisplayOrder);
-        
-        if (orderA !== orderB) return orderA - orderB;
-        return b.id.localeCompare(a.id);
-    });
+  const allTrendingProducts = getSortedProducts(
+      products.filter(p => p.isTrending),
+      'trendingDisplayOrder'
+  );
   
   const newArrivalsDisplay = allNewArrivals.slice(0, homepageNewArrivalsCount || 4);
   const trendingProductsDisplay = allTrendingProducts.slice(0, homepageTrendingCount || 4);
