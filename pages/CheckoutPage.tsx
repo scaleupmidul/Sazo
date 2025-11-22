@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { LoaderCircle } from 'lucide-react';
 
@@ -119,6 +119,7 @@ const SafeHTML: React.FC<{ content: string; style?: React.CSSProperties }> = ({ 
 const CheckoutPage: React.FC = () => {
   const { cart, cartTotal, navigate, clearCart, notify, addOrder, settings: storeSettings, loading } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   
   // Robustly handle settings to prevent crashes if data is missing or malformed
   const safeSettings = useMemo(() => {
@@ -278,8 +279,9 @@ const CheckoutPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Prevent multiple clicks
-    if (isSubmitting) return;
+    // Prevent multiple clicks immediately using Ref (synchronous)
+    if (isSubmittingRef.current) return;
+    if (isSubmitting) return; // Backup check
 
     if (!isFormValid) {
         notify("Please fill in all required fields.", "error");
@@ -290,6 +292,8 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
+    // Set submitting state immediately
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     const paymentInfo = {
@@ -321,10 +325,14 @@ const CheckoutPage: React.FC = () => {
             // Fallback if no ID is found (should not happen if backend works)
             notify("Order placed but ID missing. Please contact support.", "error");
             navigate('/'); 
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
         }
     } catch (error: any) {
         console.error("Order creation failed:", error);
         notify(error.message || "Failed to place order. Please try again.", "error");
+        // Reset submission state on error so user can try again
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
     }
   };
