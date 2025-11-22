@@ -116,9 +116,10 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
         image2: product?.images[1] || '',
         image3: product?.images[2] || '',
         isNewArrival: product?.isNewArrival ?? false,
+        newArrivalDisplayOrder: product?.newArrivalDisplayOrder ?? 1000,
         isTrending: product?.isTrending ?? false,
+        trendingDisplayOrder: product?.trendingDisplayOrder ?? 1000,
         onSale: product?.onSale ?? false,
-        displayOrder: product?.displayOrder ?? 1000,
     });
     const [isSaving, setIsSaving] = useState(false);
     const [newSize, setNewSize] = useState('');
@@ -158,9 +159,10 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
             sizes: formData.sizes,
             images: [formData.image1, formData.image2, formData.image3].filter(Boolean),
             isNewArrival: formData.isNewArrival,
+            newArrivalDisplayOrder: Number(formData.newArrivalDisplayOrder),
             isTrending: formData.isTrending,
+            trendingDisplayOrder: Number(formData.trendingDisplayOrder),
             onSale: formData.onSale,
-            displayOrder: Number(formData.displayOrder),
         };
         await onSave(product ? { ...finalData, id: product.id } : finalData);
         setIsSaving(false);
@@ -257,23 +259,55 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                 </div>
                             </div>
 
-                            <div className="md:col-span-2 p-3 border rounded-lg bg-gray-50">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Display Order (1 = First)</label>
-                                <input 
-                                    name="displayOrder" 
-                                    type="number" 
-                                    value={formData.displayOrder} 
-                                    onChange={handleChange} 
-                                    className="p-2 border rounded w-full bg-white text-black" 
-                                    placeholder="1000"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Lower numbers appear first on the Homepage (New Arrivals & Trending). Default is 1000.</p>
-                            </div>
+                             <div className="md:col-span-2 space-y-3 p-4 border rounded-lg bg-gray-50">
+                                <h3 className="font-semibold text-gray-700 mb-2">Visibility & Sorting</h3>
+                                
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center text-gray-800 cursor-pointer select-none">
+                                        <input type="checkbox" name="isNewArrival" checked={formData.isNewArrival} onChange={handleChange} className="w-4 h-4 text-pink-600 rounded mr-2"/>
+                                        <span className="font-medium">New Arrival</span>
+                                    </label>
+                                    {formData.isNewArrival && (
+                                        <div className="flex items-center gap-2 animate-fadeIn">
+                                            <label className="text-xs text-gray-500">Order (1=First):</label>
+                                            <input 
+                                                type="number" 
+                                                name="newArrivalDisplayOrder" 
+                                                value={formData.newArrivalDisplayOrder} 
+                                                onChange={handleChange} 
+                                                className="w-20 p-1 text-sm border rounded bg-white text-black"
+                                                placeholder="1000"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
 
-                             <div className="flex items-center space-x-4 md:col-span-2">
-                                <label className="text-black flex items-center"><input type="checkbox" name="isNewArrival" checked={formData.isNewArrival} onChange={handleChange} className="mr-2"/> New Arrival</label>
-                                <label className="text-black flex items-center"><input type="checkbox" name="isTrending" checked={formData.isTrending} onChange={handleChange} className="mr-2"/> Trending</label>
-                                <label className="text-black flex items-center"><input type="checkbox" name="onSale" checked={formData.onSale} onChange={handleChange} className="mr-2"/> On Sale</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center text-gray-800 cursor-pointer select-none">
+                                        <input type="checkbox" name="isTrending" checked={formData.isTrending} onChange={handleChange} className="w-4 h-4 text-pink-600 rounded mr-2"/>
+                                        <span className="font-medium">Trending Product</span>
+                                    </label>
+                                    {formData.isTrending && (
+                                        <div className="flex items-center gap-2 animate-fadeIn">
+                                            <label className="text-xs text-gray-500">Order (1=First):</label>
+                                            <input 
+                                                type="number" 
+                                                name="trendingDisplayOrder" 
+                                                value={formData.trendingDisplayOrder} 
+                                                onChange={handleChange} 
+                                                className="w-20 p-1 text-sm border rounded bg-white text-black"
+                                                placeholder="1000"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center">
+                                    <label className="flex items-center text-gray-800 cursor-pointer select-none">
+                                        <input type="checkbox" name="onSale" checked={formData.onSale} onChange={handleChange} className="w-4 h-4 text-pink-600 rounded mr-2"/>
+                                        <span className="font-medium">On Sale</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -418,7 +452,7 @@ const AdminProductsPage: React.FC = () => {
                         <tr>
                             <th scope="col" className="px-6 py-3">Product Name</th>
                             <th scope="col" className="px-6 py-3">Category</th>
-                            <th scope="col" className="px-6 py-3 text-center">Level</th>
+                            <th scope="col" className="px-6 py-3 text-center">Order</th>
                             <th scope="col" className="px-6 py-3 text-center">Status</th>
                             <th scope="col" className="px-6 py-3">Price</th>
                             <th scope="col" className="px-6 py-3 text-right">Actions</th>
@@ -430,7 +464,12 @@ const AdminProductsPage: React.FC = () => {
                                 <tr key={product.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
                                     <td className="px-6 py-4">{product.category}</td>
-                                    <td className="px-6 py-4 text-center font-mono">{product.displayOrder}</td>
+                                    <td className="px-6 py-4 text-center font-mono">
+                                        <div className="text-xs space-y-1">
+                                            {product.isNewArrival && <div>New: {product.newArrivalDisplayOrder || 1000}</div>}
+                                            {product.isTrending && <div>Trend: {product.trendingDisplayOrder || 1000}</div>}
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex flex-col gap-1 items-center">
                                             {product.isNewArrival && <span className="px-2 py-0.5 bg-pink-100 text-pink-800 rounded-full text-[10px] font-bold">NEW</span>}
