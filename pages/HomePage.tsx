@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ProductCard from '../components/ProductCard';
 import HeroSlider from '../components/HeroSlider';
@@ -41,14 +42,22 @@ const HomePage: React.FC = () => {
     return category ? category.image : 'https://picsum.photos/seed/sazo-default-category/600/800';
   };
 
-  // Explicitly sort products by their specific displayOrder on the frontend
-  // Using || 1000 ensures that 0, null, or undefined are all treated as 1000 (default/last)
-  // This fixes the issue where an accidental '0' would come before '1' or '2'
+  // Helper to normalize display order.
+  // Treats 0, undefined, null, or NaN as 1000 (default/low priority).
+  // This ensures explicitly numbered items (1, 2, 3...) always appear first.
+  const getDisplayOrder = (val: number | undefined | null) => {
+      if (val === undefined || val === null) return 1000;
+      const num = Number(val);
+      // We treat 0 as "not set" because the UI says "1=First"
+      if (isNaN(num) || num === 0) return 1000;
+      return num;
+  };
+
   const allNewArrivals = products
     .filter(p => p.isNewArrival)
     .sort((a, b) => {
-        const orderA = a.newArrivalDisplayOrder || 1000;
-        const orderB = b.newArrivalDisplayOrder || 1000;
+        const orderA = getDisplayOrder(a.newArrivalDisplayOrder);
+        const orderB = getDisplayOrder(b.newArrivalDisplayOrder);
         
         if (orderA !== orderB) return orderA - orderB;
         // Secondary sort by ID descending ensures newest products come first when displayOrder is equal
@@ -58,8 +67,8 @@ const HomePage: React.FC = () => {
   const allTrendingProducts = products
     .filter(p => p.isTrending)
     .sort((a, b) => {
-        const orderA = a.trendingDisplayOrder || 1000;
-        const orderB = b.trendingDisplayOrder || 1000;
+        const orderA = getDisplayOrder(a.trendingDisplayOrder);
+        const orderB = getDisplayOrder(b.trendingDisplayOrder);
         
         if (orderA !== orderB) return orderA - orderB;
         return b.id.localeCompare(a.id);
