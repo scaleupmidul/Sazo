@@ -1,3 +1,4 @@
+
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -138,6 +139,20 @@ export interface AdminProductsResponse {
   total: number;
 }
 
+export interface PaginationInfo {
+  page: number;
+  pages: number;
+  total: number;
+}
+
+export interface DashboardStats {
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+  onlineTransactionsCount: number;
+  recentOrders: Order[];
+  recentPayments: Order[];
+}
 
 export interface AppState {
   path: string;
@@ -157,7 +172,11 @@ export interface AppState {
   setSelectedProduct: (product: Product | null) => void;
   notification: Notification | null;
   notify: (message: string, type?: 'success' | 'error') => void;
-  orders: Order[];
+  
+  // Orders
+  orders: Order[]; // This now holds the current page of orders
+  ordersPagination: PaginationInfo;
+  loadAdminOrders: (page: number, searchTerm?: string, paymentMethod?: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   addOrder: (
     customerDetails: { name: string; phone: string; address: string; city: string; }, 
@@ -174,19 +193,34 @@ export interface AppState {
     }
   ) => Promise<Order>;
   deleteOrder: (orderId: string) => Promise<void>;
+
+  // Payment Records (Separated from Orders to avoid state conflict)
+  paymentRecords: Order[];
+  paymentRecordsPagination: PaginationInfo;
+  loadPaymentRecords: (page: number, searchTerm?: string) => Promise<void>;
+  
+  // Admin Auth & Dashboard
   isAdminAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  dashboardStats: DashboardStats | null;
+  loadDashboardStats: () => Promise<void>;
+  
+  // Messages
   contactMessages: ContactMessage[];
   addContactMessage: (messageData: Omit<ContactMessage, 'id' | 'date' | 'isRead'>) => Promise<void>;
   markMessageAsRead: (messageId: string, isRead: boolean) => Promise<void>;
   deleteContactMessage: (messageId: string) => Promise<void>;
+  
+  // General State
   loading: boolean;
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
   loadInitialData: () => Promise<void>;
   fullProductsLoaded: boolean;
   ensureAllProductsLoaded: () => Promise<void>;
+  
+  // Admin Products
   adminProducts: Product[];
   adminProductsPagination: AdminProductsPagination;
   loadAdminProducts: (page: number, searchTerm: string) => Promise<void>;
