@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { Search, Trash2, RefreshCcw } from 'lucide-react';
@@ -145,8 +146,13 @@ const AdminPaymentInfoPage: React.FC = () => {
                     ) : (
                         <tbody>
                             {safeRecords.length > 0 ? safeRecords.map(order => {
+                                // For new orders with deliveryCharge field
+                                // For older orders, fallback to calculating (Total - Cart Subtotal)
                                 const cartSubtotal = order.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
-                                const deliveryCharge = order.total - cartSubtotal;
+                                const deliveryCharge = (typeof order.deliveryCharge === 'number') 
+                                    ? order.deliveryCharge 
+                                    : (order.total - cartSubtotal);
+
                                 const { date, time } = getFormattedDateTime(order.createdAt || order.date);
 
                                 return (
