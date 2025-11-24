@@ -27,6 +27,8 @@ export const useAppStore = create<AppState>()(
         products: [],
         orders: [],
         ordersPagination: { page: 1, pages: 1, total: 0 },
+        paymentRecords: [],
+        paymentRecordsPagination: { page: 1, pages: 1, total: 0 },
         contactMessages: [],
         settings: DEFAULT_SETTINGS,
         cart: [],
@@ -148,6 +150,39 @@ export const useAppStore = create<AppState>()(
                 // Clear orders on error to avoid showing stale state
                 set({ orders: [], ordersPagination: { page: 1, pages: 1, total: 0 } });
                 get().notify("Failed to load orders.", "error");
+            }
+        },
+
+        loadPaymentRecords: async (page = 1, searchTerm = '') => {
+            const token = getTokenFromStorage();
+            if (!token) return;
+
+            try {
+                const params = new URLSearchParams({
+                    page: String(page),
+                    limit: '20',
+                    search: searchTerm,
+                    paymentMethod: 'Online'
+                });
+
+                const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to fetch payment records');
+
+                const data = await res.json();
+                set({ 
+                    paymentRecords: Array.isArray(data.orders) ? data.orders : [],
+                    paymentRecordsPagination: {
+                        page: data.page || 1,
+                        pages: data.pages || 1,
+                        total: data.total || 0
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to load payment records", error);
+                set({ paymentRecords: [], paymentRecordsPagination: { page: 1, pages: 1, total: 0 } });
+                get().notify("Failed to load payment records.", "error");
             }
         },
 
@@ -393,11 +428,10 @@ export const useAppStore = create<AppState>()(
             });
             const updatedOrder = await res.json();
             
-            // Optimistically update dashboard stats logic is complex, 
-            // simpler to let the user refresh or re-fetch on navigation.
-            // But we must update the current orders list.
+            // Update both lists to keep them in sync if necessary
             set(state => ({
-                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
+                paymentRecords: state.paymentRecords.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             }));
             
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
@@ -424,7 +458,10 @@ export const useAppStore = create<AppState>()(
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
             });
-            set(state => ({ orders: state.orders.filter(order => order.id !== orderId) }));
+            set(state => ({ 
+                orders: state.orders.filter(order => order.id !== orderId),
+                paymentRecords: state.paymentRecords.filter(order => order.id !== orderId)
+            }));
             get().notify(`Order has been deleted.`, 'success');
         },
         
@@ -491,18 +528,29 @@ export const useAppStore = create<AppState>()(
             return currentState;
         }
 
+        // Only extract allowed keys from persisted state to prevent pollution
+        // This is crucial to avoid loading stale 'orders' or 'products' from previous versions
+        const { cart, settings } = persistedState;
+
         let safeCart: CartItem[] = [];
-        if (Array.isArray(persistedState.cart)) {
-            safeCart = persistedState.cart.filter((item: any) => 
+        if (Array.isArray(cart)) {
+            safeCart = cart.filter((item: any) => 
                 item && typeof item === 'object' && typeof item.id === 'string' && 
                 typeof item.price === 'number' && !isNaN(item.price) &&
                 typeof item.quantity === 'number' && !isNaN(item.quantity)
             );
         }
 
-        const mergedSettings = persistedState.settings || currentState.settings;
+        const mergedSettings = settings || currentState.settings;
 
-        const merged = { ...currentState, ...persistedState, cart: safeCart, settings: mergedSettings };
+        // Force a fresh state for everything else by spreading currentState first
+        const merged = { 
+            ...currentState, 
+            cart: safeCart, 
+            settings: mergedSettings 
+        };
+        
+        // Re-calculate derived values
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
         return merged;
