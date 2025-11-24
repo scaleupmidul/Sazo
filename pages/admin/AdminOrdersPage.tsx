@@ -1,7 +1,8 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard, Eye } from 'lucide-react';
+import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard, Eye, RefreshCcw } from 'lucide-react';
 import { useAppStore } from '../../store';
 import TableSkeleton from '../../components/admin/TableSkeleton';
 
@@ -179,7 +180,7 @@ const AdminOrdersPage: React.FC = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
   // SAFEGUARD: Ensure orders is always an array
-  const safeOrders = orders || [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
   const selectedOrder = useMemo(() => safeOrders.find(o => o.id === selectedOrderId), [safeOrders, selectedOrderId]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,21 +195,20 @@ const AdminOrdersPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    try {
+        await loadAdminOrders(currentPage, debouncedSearchTerm);
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   // Fetch orders when dependencies change
   useEffect(() => {
-    let isMounted = true;
-    const fetchOrders = async () => {
-        setIsLoading(true);
-        try {
-            await loadAdminOrders(currentPage, debouncedSearchTerm);
-        } catch (error) {
-            console.error("Error fetching orders:", error);
-        } finally {
-            if (isMounted) setIsLoading(false);
-        }
-    };
     fetchOrders();
-    return () => { isMounted = false; };
   }, [currentPage, debouncedSearchTerm, loadAdminOrders]);
 
   const PaginationControls = () => {
@@ -248,15 +248,24 @@ const AdminOrdersPage: React.FC = () => {
                 <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
                 <p className="text-slate-500 text-sm mt-1">Track and manage customer orders.</p>
             </div>
-            <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input 
-                    type="text"
-                    placeholder="Search by name, phone or ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
-                />
+            <div className="flex gap-2 w-full sm:w-auto">
+                 <div className="relative w-full sm:w-72">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                    <input 
+                        type="text"
+                        placeholder="Search by name, phone or ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
+                    />
+                </div>
+                <button 
+                    onClick={fetchOrders}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-colors"
+                    title="Refresh Orders"
+                >
+                    <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
             </div>
         </div>
 
