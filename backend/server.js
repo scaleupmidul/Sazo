@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
@@ -15,7 +14,6 @@ import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import messageRoutes from './routes/messages.js';
 import settingsRoutes from './routes/settings.js';
-import statsRoutes from './routes/stats.js';
 
 import { MOCK_PRODUCTS_DATA, DEFAULT_SETTINGS_DATA } from './data/seedData.js';
 
@@ -28,6 +26,10 @@ app.use(compression());
 app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
 
 // --- Database Connection Middleware ---
+// Note: We removed the automatic seeding check (initializeDatabase) from the request path
+// because it causes significant delay (6-7s) on cold starts by performing extra DB queries.
+// Seeding should be done manually or via a separate script if needed.
+
 const dbConnectionMiddleware = async (req, res, next) => {
     try {
         await connectDB();
@@ -45,6 +47,8 @@ app.use('/api', dbConnectionMiddleware);
 app.get('/api/page-data/home', async (req, res) => {
     try {
         // PERFORMANCE: Add Cache-Control header
+        // s-maxage=60: Cache in Vercel Edge/CDN for 60 seconds
+        // stale-while-revalidate=300: Serve stale content for up to 5 mins while fetching new data in background
         res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
         // PERFORMANCE: Use Promise.all to fetch Settings and Products in parallel
@@ -57,9 +61,11 @@ app.get('/api/page-data/home', async (req, res) => {
         ]);
 
         if (!settings) {
+            // Fallback if settings are missing (rare case if DB is empty)
             return res.json({ settings: DEFAULT_SETTINGS_DATA, products: [] });
         }
         
+        // Manual Transformation for .lean() objects (replacing _id with id)
         const transformId = (doc) => {
             if (!doc) return doc;
             const { _id, __v, ...rest } = doc;
@@ -83,6 +89,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/stats', statsRoutes);
 
+// The app.listen() is removed for Vercel deployment.
+// Vercel handles starting the server in a serverless environment.
 export default app;
