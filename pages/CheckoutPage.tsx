@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { LoaderCircle } from 'lucide-react';
@@ -278,6 +280,7 @@ const CheckoutPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation(); // Explicitly stop propagation to prevent bubbling
     
     // Prevent multiple clicks immediately using Ref (synchronous)
     if (isSubmittingRef.current) return;
@@ -311,7 +314,8 @@ const CheckoutPage: React.FC = () => {
           { name: formData.name, phone: formData.phone, address: formData.address, city: formData.city },
           cart,
           totalPayable,
-          paymentInfo
+          paymentInfo,
+          shippingCharge // Pass selected shipping charge
         );
     
         // Priority: Use the friendly orderId if available (numeric 5-7 chars)
