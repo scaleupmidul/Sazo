@@ -26,7 +26,6 @@ export const useAppStore = create<AppState>()(
         path: window.location.pathname,
         products: [],
         orders: [],
-        ordersPagination: { page: 1, pages: 1, total: 0 },
         contactMessages: [],
         settings: DEFAULT_SETTINGS,
         cart: [],
@@ -38,7 +37,6 @@ export const useAppStore = create<AppState>()(
         fullProductsLoaded: false,
         adminProducts: [],
         adminProductsPagination: { page: 1, pages: 1, total: 0 },
-        dashboardStats: null,
         
         navigate: (newPath: string) => {
             if (window.location.pathname !== newPath) {
@@ -49,9 +47,11 @@ export const useAppStore = create<AppState>()(
         },
 
         loadInitialData: async () => {
-            // PERFORMANCE: Use cached settings for immediate UI rendering if available
+            // PERFORMANCE: If we already have settings (from persistence), 
+            // don't show the full loading spinner. Just update in background.
+            // Only set loading=true if we have no settings at all (fresh install/clear cache)
             const currentSettings = get().settings;
-            const hasCachedSettings = currentSettings && currentSettings.adminEmail !== '';
+            const hasCachedSettings = currentSettings && currentSettings.adminEmail !== ''; // Basic check
             
             if (!hasCachedSettings) {
                 set({ loading: true });
@@ -69,87 +69,43 @@ export const useAppStore = create<AppState>()(
                     products: homeData.products,
                     settings: homeData.settings,
                     fullProductsLoaded: false,
-                    loading: false, 
+                    loading: false, // Ensure loading is off after fetch
                 });
 
-                // If admin is logged in, ONLY fetch messages initially.
-                // Orders and heavy stats should be loaded on demand by specific pages.
+                // If admin is logged in, fetch admin-specific data
                 if (isAdminAuthenticated) {
                     const token = getTokenFromStorage();
                     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-                    // Fetch messages to show notification badge count in sidebar
-                    const messagesRes = await fetch(`${API_URL}/messages`, { headers });
+                    const [ordersRes, messagesRes] = await Promise.all([
+                        fetch(`${API_URL}/orders`, { headers }),
+                        fetch(`${API_URL}/messages`, { headers })
+                    ]);
 
-                    if (messagesRes.ok) {
-                        const messagesData = await messagesRes.json();
-                        set({ contactMessages: messagesData });
+                    if (!ordersRes.ok || !messagesRes.ok) {
+                        throw new Error('Failed to fetch admin data.');
                     }
+
+                    const ordersData = await ordersRes.json();
+                    const messagesData = await messagesRes.json();
+                    set({ orders: ordersData, contactMessages: messagesData });
                 }
             } catch (error) {
                 console.error("Failed to load initial data", error);
+                // Only notify error if we don't have cached data to show
                 if (!hasCachedSettings) {
                     notify("Could not connect to the server.", "error");
                 }
             } finally {
                 set({ loading: false });
+                // After the initial UI render is unblocked, start fetching the rest of the products in the background.
                 setTimeout(() => {
                     get().ensureAllProductsLoaded();
                 }, 100);
             }
         },
 
-        loadDashboardStats: async () => {
-             const token = getTokenFromStorage();
-             if (!token) return;
-
-             try {
-                 const res = await fetch(`${API_URL}/stats`, {
-                     headers: { 'Authorization': `Bearer ${token}` }
-                 });
-                 if (!res.ok) throw new Error('Failed to fetch stats');
-                 const data = await res.json();
-                 set({ dashboardStats: data });
-             } catch (error) {
-                 console.error("Failed to load dashboard stats", error);
-             }
-        },
-
-        loadAdminOrders: async (page = 1, searchTerm = '', paymentMethod) => {
-            const token = getTokenFromStorage();
-            if (!token) return;
-
-            try {
-                const params = new URLSearchParams({
-                    page: String(page),
-                    limit: '20', // Fetch 20 items per page
-                    search: searchTerm
-                });
-                if (paymentMethod) {
-                    params.append('paymentMethod', paymentMethod);
-                }
-
-                const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error('Failed to fetch orders');
-
-                const data = await res.json();
-                set({ 
-                    orders: data.orders,
-                    ordersPagination: {
-                        page: data.page,
-                        pages: data.pages,
-                        total: data.total
-                    }
-                });
-            } catch (error) {
-                console.error("Failed to load orders", error);
-                get().notify("Failed to load orders.", "error");
-            }
-        },
-
         ensureAllProductsLoaded: async () => {
-            const { fullProductsLoaded, products: existingProducts } = get();
+            const { fullProductsLoaded, products: existingProducts, notify } = get();
             if (fullProductsLoaded) return;
     
             try {
@@ -157,6 +113,7 @@ export const useAppStore = create<AppState>()(
                 if (!res.ok) throw new Error('Failed to fetch all products');
                 const allProducts: Product[] = await res.json();
                 
+                // Merge products, giving precedence to the full list but keeping existing ones if not in the new list
                 const productMap = new Map<string, Product>();
                 existingProducts.forEach(p => productMap.set(p.id, p));
                 allProducts.forEach(p => productMap.set(p.id, p));
@@ -165,6 +122,8 @@ export const useAppStore = create<AppState>()(
                 set({ products: mergedProducts, fullProductsLoaded: true });
             } catch (error) {
                 console.error("Failed to load all products", error);
+                // Silent fail for background fetch is usually better unless debugging
+                // notify("Could not load all products.", "error");
             }
         },
 
@@ -229,6 +188,7 @@ export const useAppStore = create<AppState>()(
                 newCart = [...cart, newItem];
             }
             
+            // Push GA4 add_to_cart event
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({ ecommerce: null });
             window.dataLayer.push({
@@ -257,9 +217,11 @@ export const useAppStore = create<AppState>()(
 
             const oldQuantity = cartItem.quantity;
             const quantityDifference = newQuantity - oldQuantity;
+            
+            // Find the full product details for tracking
             const productDetails = products.find(p => p.id === id);
 
-            if (quantityDifference > 0 && productDetails) {
+            if (quantityDifference > 0 && productDetails) { // Item quantity increased
                 window.dataLayer = window.dataLayer || [];
                 window.dataLayer.push({ ecommerce: null });
                 window.dataLayer.push({
@@ -271,12 +233,12 @@ export const useAppStore = create<AppState>()(
                             item_name: productDetails.name,
                             item_category: productDetails.category,
                             price: productDetails.price,
-                            quantity: quantityDifference,
+                            quantity: quantityDifference, // track the number of items added
                             item_variant: size
                         }]
                     }
                 });
-            } else if (quantityDifference < 0 && productDetails) {
+            } else if (quantityDifference < 0 && productDetails) { // Item quantity decreased or removed
                  window.dataLayer = window.dataLayer || [];
                  window.dataLayer.push({ ecommerce: null });
                  window.dataLayer.push({
@@ -288,7 +250,7 @@ export const useAppStore = create<AppState>()(
                             item_name: productDetails.name,
                             item_category: productDetails.category,
                             price: productDetails.price,
-                            quantity: -quantityDifference,
+                            quantity: -quantityDifference, // track the number of items removed
                             item_variant: size
                         }]
                     }
@@ -340,7 +302,7 @@ export const useAppStore = create<AppState>()(
 
         logout: () => {
             localStorage.removeItem('sazo_admin_token');
-            set({ isAdminAuthenticated: false, orders: [], contactMessages: [], dashboardStats: null });
+            set({ isAdminAuthenticated: false, orders: [], contactMessages: [] });
             get().navigate('/');
             get().notify('You have been logged out.', 'success');
         },
@@ -389,14 +351,9 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify({ status }),
             });
             const updatedOrder = await res.json();
-            
-            // Optimistically update dashboard stats logic is complex, 
-            // simpler to let the user refresh or re-fetch on navigation.
-            // But we must update the current orders list.
             set(state => ({
                 orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             }));
-            
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
         },
 
@@ -412,7 +369,11 @@ export const useAppStore = create<AppState>()(
                 throw new Error(errorData.message || "Failed to place order. Please check your details.");
             }
             
-            return await res.json();
+            const newOrder = await res.json();
+            if(get().isAdminAuthenticated) {
+                set(state => ({ orders: [newOrder, ...state.orders] }));
+            }
+            return newOrder;
         },
 
         deleteOrder: async (orderId) => {
@@ -422,7 +383,7 @@ export const useAppStore = create<AppState>()(
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             set(state => ({ orders: state.orders.filter(order => order.id !== orderId) }));
-            get().notify(`Order has been deleted.`, 'success');
+            get().notify(`Order ${orderId} has been deleted.`, 'success');
         },
         
         addContactMessage: async (messageData) => {
@@ -466,7 +427,7 @@ export const useAppStore = create<AppState>()(
                     body: JSON.stringify(newSettings),
                 });
                 if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({ message: 'Failed to update settings.' }));
+                    const errorData = await res.json().catch(() => ({ message: 'Failed to update settings. The server returned an invalid response.' }));
                     throw new Error(errorData.message || 'Failed to update settings.');
                 }
                 const updatedSettings = await res.json();
@@ -482,24 +443,34 @@ export const useAppStore = create<AppState>()(
     {
       name: 'sazo-storage',
       storage: createJSONStorage(() => localStorage),
+      // PERSIST SETTINGS FOR INSTANT LOAD (OPTIMISTIC UI)
       partialize: (state) => ({ cart: state.cart, settings: state.settings }),
+      // Custom merge function to recalculate cartTotal on rehydration and validate data
       merge: (persistedState: any, currentState: AppState) => {
+        // Safety check: if persisted state is not an object or null, ignore it
         if (!persistedState || typeof persistedState !== 'object') {
             return currentState;
         }
 
+        // Strict validation for cart items to prevent crashes
         let safeCart: CartItem[] = [];
         if (Array.isArray(persistedState.cart)) {
             safeCart = persistedState.cart.filter((item: any) => 
-                item && typeof item === 'object' && typeof item.id === 'string' && 
-                typeof item.price === 'number' && !isNaN(item.price) &&
-                typeof item.quantity === 'number' && !isNaN(item.quantity)
+                item && 
+                typeof item === 'object' &&
+                typeof item.id === 'string' && 
+                typeof item.price === 'number' && 
+                !isNaN(item.price) &&
+                typeof item.quantity === 'number' &&
+                !isNaN(item.quantity)
             );
         }
 
+        // Merge settings if they exist, otherwise fallback to current/default
         const mergedSettings = persistedState.settings || currentState.settings;
 
         const merged = { ...currentState, ...persistedState, cart: safeCart, settings: mergedSettings };
+        // Recalculate total based on the validated cart
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
         return merged;
@@ -508,8 +479,10 @@ export const useAppStore = create<AppState>()(
   )
 );
 
+// Initialize popstate listener for browser navigation
 window.addEventListener('popstate', () => {
   useAppStore.setState({ path: window.location.pathname });
 });
 
+// Load initial data when the store is created
 useAppStore.getState().loadInitialData();
