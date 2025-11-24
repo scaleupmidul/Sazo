@@ -47,10 +47,19 @@ export const useAppStore = create<AppState>()(
         },
 
         loadInitialData: async () => {
-            set({ loading: true });
+            // PERFORMANCE: If we already have settings (from persistence), 
+            // don't show the full loading spinner. Just update in background.
+            // Only set loading=true if we have no settings at all (fresh install/clear cache)
+            const currentSettings = get().settings;
+            const hasCachedSettings = currentSettings && currentSettings.adminEmail !== ''; // Basic check
+            
+            if (!hasCachedSettings) {
+                set({ loading: true });
+            }
+
             const { isAdminAuthenticated, notify } = get();
             try {
-                // Fetch optimized homepage data first for a fast initial load
+                // Fetch optimized homepage data
                 const homeDataRes = await fetch(`${API_URL}/page-data/home`);
                 if (!homeDataRes.ok) {
                     throw new Error('Failed to fetch initial page data.');
@@ -60,6 +69,7 @@ export const useAppStore = create<AppState>()(
                     products: homeData.products,
                     settings: homeData.settings,
                     fullProductsLoaded: false,
+                    loading: false, // Ensure loading is off after fetch
                 });
 
                 // If admin is logged in, fetch admin-specific data
@@ -81,11 +91,13 @@ export const useAppStore = create<AppState>()(
                 }
             } catch (error) {
                 console.error("Failed to load initial data", error);
-                notify("Could not connect to the server.", "error");
+                // Only notify error if we don't have cached data to show
+                if (!hasCachedSettings) {
+                    notify("Could not connect to the server.", "error");
+                }
             } finally {
                 set({ loading: false });
                 // After the initial UI render is unblocked, start fetching the rest of the products in the background.
-                // This pre-fetching makes navigating to the Shop page feel instantaneous.
                 setTimeout(() => {
                     get().ensureAllProductsLoaded();
                 }, 100);
@@ -110,7 +122,8 @@ export const useAppStore = create<AppState>()(
                 set({ products: mergedProducts, fullProductsLoaded: true });
             } catch (error) {
                 console.error("Failed to load all products", error);
-                notify("Could not load all products.", "error");
+                // Silent fail for background fetch is usually better unless debugging
+                // notify("Could not load all products.", "error");
             }
         },
 
@@ -430,8 +443,8 @@ export const useAppStore = create<AppState>()(
     {
       name: 'sazo-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only persist the 'cart' slice of the state
-      partialize: (state) => ({ cart: state.cart }),
+      // PERSIST SETTINGS FOR INSTANT LOAD (OPTIMISTIC UI)
+      partialize: (state) => ({ cart: state.cart, settings: state.settings }),
       // Custom merge function to recalculate cartTotal on rehydration and validate data
       merge: (persistedState: any, currentState: AppState) => {
         // Safety check: if persisted state is not an object or null, ignore it
@@ -453,7 +466,10 @@ export const useAppStore = create<AppState>()(
             );
         }
 
-        const merged = { ...currentState, ...persistedState, cart: safeCart };
+        // Merge settings if they exist, otherwise fallback to current/default
+        const mergedSettings = persistedState.settings || currentState.settings;
+
+        const merged = { ...currentState, ...persistedState, cart: safeCart, settings: mergedSettings };
         // Recalculate total based on the validated cart
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
