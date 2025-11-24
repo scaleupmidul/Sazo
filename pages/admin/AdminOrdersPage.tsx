@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
 import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard, Eye, RefreshCcw } from 'lucide-react';
@@ -23,6 +24,30 @@ const getStatusBadge = (status: OrderStatus) => {
     );
 }
 
+// Helper to format date and time in Bangladesh Time
+const getFormattedDateTime = (isoString?: string) => {
+    if (!isoString) return { date: 'N/A', time: '' };
+    const dateObj = new Date(isoString);
+    
+    // Format Date: 24 Nov 2025
+    const date = dateObj.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Dhaka'
+    });
+
+    // Format Time: 05:30 PM
+    const time = dateObj.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Dhaka'
+    });
+
+    return { date, time };
+};
+
 interface OrderDetailsModalProps {
   order: Order;
   onClose: () => void;
@@ -41,6 +66,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
             onClose();
         }
     }
+
+    const { date, time } = getFormattedDateTime(order.createdAt || order.date);
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -93,8 +120,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
                             </h3>
                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-500 flex items-center gap-2"><Calendar className="w-3.5 h-3.5"/> Date</span>
-                                    <span className="text-sm font-medium text-slate-800">{order.date}</span>
+                                    <span className="text-sm text-slate-500 flex items-center gap-2"><Calendar className="w-3.5 h-3.5"/> Placed On</span>
+                                    <div className="text-right">
+                                        <p className="text-sm font-medium text-slate-800">{date}</p>
+                                        <p className="text-xs text-slate-500">{time}</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-slate-500">Payment</span>
@@ -287,28 +317,36 @@ const AdminOrdersPage: React.FC = () => {
                     ) : (
                         <tbody className="divide-y divide-slate-100">
                             {safeOrders.length > 0 ? (
-                                safeOrders.map(order => (
-                                    <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrderId(order.id)}>
-                                        <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-slate-900 font-medium">{order.customerName}</div>
-                                            <div className="text-xs text-slate-500">{order.phone}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-600">{order.date}</td>
-                                        <td className="px-6 py-4 font-semibold text-slate-800">৳{order.total.toLocaleString()}</td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(order.status)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); setSelectedOrderId(order.id); }}
-                                                className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                safeOrders.map(order => {
+                                    const { date, time } = getFormattedDateTime(order.createdAt || order.date);
+                                    return (
+                                        <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrderId(order.id)}>
+                                            <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-slate-900 font-medium">{order.customerName}</div>
+                                                <div className="text-xs text-slate-500">{order.phone}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-slate-700">{date}</span>
+                                                    <span className="text-xs text-slate-500">{time}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 font-semibold text-slate-800">৳{order.total.toLocaleString()}</td>
+                                            <td className="px-6 py-4">
+                                                {getStatusBadge(order.status)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedOrderId(order.id); }}
+                                                    className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="text-center py-12 text-slate-400">
