@@ -1,19 +1,19 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { Search, Trash2, RefreshCcw } from 'lucide-react';
 import TableSkeleton from '../../components/admin/TableSkeleton';
 
 const AdminPaymentInfoPage: React.FC = () => {
-    const { orders, ordersPagination, loadAdminOrders, deleteOrder } = useAppStore();
+    // Use dedicated paymentRecords state instead of shared orders state
+    const { paymentRecords, paymentRecordsPagination, loadPaymentRecords, deleteOrder } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Safe access to orders
-    const safeOrders = Array.isArray(orders) ? orders : [];
+    // Safe access to paymentRecords
+    const safeRecords = Array.isArray(paymentRecords) ? paymentRecords : [];
 
     // Debounce search
     useEffect(() => {
@@ -27,7 +27,7 @@ const AdminPaymentInfoPage: React.FC = () => {
     const fetchOnlineOrders = async () => {
         setIsLoading(true);
         try {
-            await loadAdminOrders(currentPage, debouncedSearchTerm, 'Online');
+            await loadPaymentRecords(currentPage, debouncedSearchTerm);
         } catch (error) {
             console.error("Error fetching payment records:", error);
         } finally {
@@ -38,7 +38,7 @@ const AdminPaymentInfoPage: React.FC = () => {
     // Fetch ONLY Online orders
     useEffect(() => {
         fetchOnlineOrders();
-    }, [currentPage, debouncedSearchTerm, loadAdminOrders]);
+    }, [currentPage, debouncedSearchTerm, loadPaymentRecords]);
 
     const handleDelete = async (orderId: string) => {
         if (window.confirm('Are you sure you want to delete this payment record and its associated order?')) {
@@ -49,7 +49,7 @@ const AdminPaymentInfoPage: React.FC = () => {
     };
 
     const PaginationControls = () => {
-        const { page, pages, total } = ordersPagination;
+        const { page, pages, total } = paymentRecordsPagination;
         if (pages <= 1 && total === 0) return null;
     
         return (
@@ -119,7 +119,7 @@ const AdminPaymentInfoPage: React.FC = () => {
                          <TableSkeleton cols={8} rows={10} />
                     ) : (
                         <tbody>
-                            {safeOrders.length > 0 ? safeOrders.map(order => {
+                            {safeRecords.length > 0 ? safeRecords.map(order => {
                                 const cartSubtotal = order.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
                                 const deliveryCharge = order.total - cartSubtotal;
 
