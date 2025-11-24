@@ -1,6 +1,5 @@
 
 
-
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -174,6 +173,7 @@ export interface AppState {
   cartTotal: number;
   selectedProduct: Product | null;
   setSelectedProduct: (product: Product | null) => void;
+  fetchProductDetails: (id: string) => Promise<void>;
   notification: Notification | null;
   notify: (message: string, type?: 'success' | 'error') => void;
   
