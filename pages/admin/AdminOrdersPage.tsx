@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2, LoaderCircle, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
+import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
 import { useAppStore } from '../../store';
 import TableSkeleton from '../../components/admin/TableSkeleton';
 
@@ -132,8 +131,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {(order.cartItems || []).map((item: CartItem) => (
-                                        <tr key={item.id} className="bg-white">
+                                    {(order.cartItems || []).map((item: CartItem, index) => (
+                                        <tr key={`${item.id}-${index}`} className="bg-white">
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
                                                     <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
@@ -174,21 +173,15 @@ const AdminOrdersPage: React.FC = () => {
   const { orders, ordersPagination, loadAdminOrders, updateOrderStatus, deleteOrder } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  // Use ID tracking instead of object reference to prevent render loops
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const selectedOrder = useMemo(() => orders.find(o => o.id === selectedOrderId), [orders, selectedOrderId]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (selectedOrder) {
-      const updatedOrderInList = orders.find(o => o.id === selectedOrder.id);
-      if (updatedOrderInList && JSON.stringify(updatedOrderInList) !== JSON.stringify(selectedOrder)) {
-            setSelectedOrder(updatedOrderInList);
-      } else if (!updatedOrderInList) {
-        setSelectedOrder(null);
-      }
-    }
-  }, [orders, selectedOrder]);
-
+  // Debounce search input
   useEffect(() => {
     const handler = setTimeout(() => {
         setDebouncedSearchTerm(searchTerm);
@@ -197,13 +190,21 @@ const AdminOrdersPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
+  // Fetch orders when dependencies change
   useEffect(() => {
+    let isMounted = true;
     const fetchOrders = async () => {
         setIsLoading(true);
-        await loadAdminOrders(currentPage, debouncedSearchTerm);
-        setIsLoading(false);
+        try {
+            await loadAdminOrders(currentPage, debouncedSearchTerm);
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+        } finally {
+            if (isMounted) setIsLoading(false);
+        }
     };
     fetchOrders();
+    return () => { isMounted = false; };
   }, [currentPage, debouncedSearchTerm, loadAdminOrders]);
 
   const PaginationControls = () => {
@@ -271,21 +272,22 @@ const AdminOrdersPage: React.FC = () => {
                         <TableSkeleton cols={5} rows={10} />
                     ) : (
                         <tbody className="divide-y divide-slate-100">
-                            {orders.map(order => (
-                                <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrder(order)}>
-                                    <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-slate-900 font-medium">{order.customerName}</div>
-                                        <div className="text-xs text-slate-500">{order.phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600">{order.date}</td>
-                                    <td className="px-6 py-4 font-semibold text-slate-800">৳{order.total.toLocaleString()}</td>
-                                    <td className="px-6 py-4">
-                                        {getStatusBadge(order.status)}
-                                    </td>
-                                </tr>
-                            ))}
-                             {orders.length === 0 && (
+                            {orders && orders.length > 0 ? (
+                                orders.map(order => (
+                                    <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrderId(order.id)}>
+                                        <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-slate-900 font-medium">{order.customerName}</div>
+                                            <div className="text-xs text-slate-500">{order.phone}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-600">{order.date}</td>
+                                        <td className="px-6 py-4 font-semibold text-slate-800">৳{order.total.toLocaleString()}</td>
+                                        <td className="px-6 py-4">
+                                            {getStatusBadge(order.status)}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr>
                                     <td colSpan={5} className="text-center py-12 text-slate-400">
                                         <div className="flex flex-col items-center justify-center">
@@ -303,12 +305,14 @@ const AdminOrdersPage: React.FC = () => {
         
         <PaginationControls />
 
-        {selectedOrder && <OrderDetailsModal 
-            order={selectedOrder} 
-            onClose={() => setSelectedOrder(null)} 
-            updateOrderStatus={updateOrderStatus}
-            deleteOrder={deleteOrder}
-        />}
+        {selectedOrder && (
+            <OrderDetailsModal 
+                order={selectedOrder} 
+                onClose={() => setSelectedOrderId(null)} 
+                updateOrderStatus={updateOrderStatus}
+                deleteOrder={deleteOrder}
+            />
+        )}
     </div>
   );
 };
