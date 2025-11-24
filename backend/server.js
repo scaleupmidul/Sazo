@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
+import compression from 'compression';
 
 import connectDB from './db.js';
 
@@ -20,6 +21,8 @@ const app = express();
 
 // Middlewares
 app.use(cors());
+// Gzip Compression: Reduces payload size by 70-80%, saving bandwidth and speeding up load times
+app.use(compression());
 app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
 
 // --- Database Connection Middleware ---
@@ -43,23 +46,36 @@ app.use('/api', dbConnectionMiddleware);
 // --- New Homepage Data Route ---
 app.get('/api/page-data/home', async (req, res) => {
     try {
-        // Fetch settings but exclude sensitive admin password
-        const settings = await Settings.findOne().select('-adminPassword');
-        // Fetch only products marked as new arrival or trending
-        // Sort by displayOrder (ascending) then createdAt (descending)
-        const products = await Product.find({ $or: [{ isNewArrival: true }, { isTrending: true }] })
-            .sort({ displayOrder: 1, createdAt: -1 });
+        // PERFORMANCE: Add Cache-Control header
+        // s-maxage=60: Cache in Vercel Edge/CDN for 60 seconds
+        // stale-while-revalidate=300: Serve stale content for up to 5 mins while fetching new data in background
+        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+
+        // PERFORMANCE: Use Promise.all to fetch Settings and Products in parallel
+        // PERFORMANCE: Use .lean() to return plain JS objects instead of heavy Mongoose documents
+        const [settings, products] = await Promise.all([
+            Settings.findOne().select('-adminPassword').lean(),
+            Product.find({ $or: [{ isNewArrival: true }, { isTrending: true }] })
+                .sort({ displayOrder: 1, createdAt: -1 })
+                .lean()
+        ]);
 
         if (!settings) {
             // Fallback if settings are missing (rare case if DB is empty)
             return res.json({ settings: DEFAULT_SETTINGS_DATA, products: [] });
         }
         
-        const settingsObj = settings.toObject();
-        delete settingsObj._id;
-        delete settingsObj.__v;
+        // Manual Transformation for .lean() objects (replacing _id with id)
+        const transformId = (doc) => {
+            if (!doc) return doc;
+            const { _id, __v, ...rest } = doc;
+            return { id: _id.toString(), ...rest };
+        };
 
-        res.json({ settings: settingsObj, products });
+        const settingsObj = transformId(settings);
+        const productsList = products.map(transformId);
+
+        res.json({ settings: settingsObj, products: productsList });
     } catch (error) {
         console.error('Error fetching homepage data:', error);
         res.status(500).json({ message: 'Server Error fetching homepage data' });
