@@ -22,47 +22,17 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
 
-// --- Database Connection & Seeding Middleware ---
-let isSeedingComplete = false;
-const initializeDatabase = async () => {
-    if (isSeedingComplete) return;
-
-    try {
-        // Seed Settings
-        const settingsCount = await Settings.countDocuments();
-        if (settingsCount === 0) {
-            console.log('No settings found, seeding...');
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(DEFAULT_SETTINGS_DATA.adminPassword, salt);
-            await Settings.create({ ...DEFAULT_SETTINGS_DATA, adminPassword: hashedPassword });
-            console.log('Default settings seeded.');
-        }
-
-        // Seed Products
-        const productCount = await Product.countDocuments();
-        if (productCount === 0) {
-            console.log('No products found, seeding...');
-            // Remove frontend-specific ID before inserting
-            const productsToSeed = MOCK_PRODUCTS_DATA.map(({ id, ...rest }) => rest);
-            await Product.insertMany(productsToSeed);
-            console.log('Mock products seeded.');
-        }
-        
-        isSeedingComplete = true; // Mark seeding as complete for this instance
-    } catch (error) {
-        console.error('Error during database initialization:', error);
-        // We throw the error to be caught by the middleware handler
-        throw new Error('Database initialization failed.');
-    }
-};
+// --- Database Connection Middleware ---
+// Note: We removed the automatic seeding check (initializeDatabase) from the request path
+// because it causes significant delay (6-7s) on cold starts by performing extra DB queries.
+// Seeding should be done manually or via a separate script if needed.
 
 const dbConnectionMiddleware = async (req, res, next) => {
     try {
         await connectDB();
-        await initializeDatabase();
         next();
     } catch (error) {
-        console.error("Database connection or seeding failed:", error);
+        console.error("Database connection failed:", error);
         res.status(503).json({ message: "Service Unavailable: Could not connect to the database." });
     }
 };
@@ -81,7 +51,8 @@ app.get('/api/page-data/home', async (req, res) => {
             .sort({ displayOrder: 1, createdAt: -1 });
 
         if (!settings) {
-            return res.status(404).json({ message: 'Settings not found' });
+            // Fallback if settings are missing (rare case if DB is empty)
+            return res.json({ settings: DEFAULT_SETTINGS_DATA, products: [] });
         }
         
         const settingsObj = settings.toObject();
