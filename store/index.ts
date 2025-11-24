@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
 
-const API_URL = '/api';
+// Use environment variable for API URL if available, fallback to proxy path
+const API_URL = (import.meta as any).env.VITE_API_URL || '/api';
 
 const getTokenFromStorage = (): string | null => {
     return localStorage.getItem('sazo_admin_token');
@@ -152,7 +153,16 @@ export const useAppStore = create<AppState>()(
                     return;
                 }
 
-                if (!res.ok) throw new Error('Failed to fetch orders');
+                if (!res.ok) {
+                    // Try to parse error message, otherwise throw generic
+                    const text = await res.text();
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Failed to fetch orders');
+                    } catch {
+                         throw new Error(`Server Error: ${res.status} ${res.statusText}`);
+                    }
+                }
 
                 const data = await res.json();
                 set({ 
@@ -164,11 +174,11 @@ export const useAppStore = create<AppState>()(
                         total: data.total || 0
                     }
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to load orders", error);
                 // Clear orders on error to avoid showing stale state
                 set({ orders: [], ordersPagination: { page: 1, pages: 1, total: 0 } });
-                get().notify("Failed to load orders.", "error");
+                get().notify(error.message || "Failed to load orders.", "error");
             }
         },
 
@@ -194,7 +204,15 @@ export const useAppStore = create<AppState>()(
                     return;
                 }
 
-                if (!res.ok) throw new Error('Failed to fetch payment records');
+                if (!res.ok) {
+                    const text = await res.text();
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Failed to fetch payment records');
+                    } catch {
+                         throw new Error(`Server Error: ${res.status} ${res.statusText}`);
+                    }
+                }
 
                 const data = await res.json();
                 set({ 
@@ -205,10 +223,10 @@ export const useAppStore = create<AppState>()(
                         total: data.total || 0
                     }
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to load payment records", error);
                 set({ paymentRecords: [], paymentRecordsPagination: { page: 1, pages: 1, total: 0 } });
-                get().notify("Failed to load payment records.", "error");
+                get().notify(error.message || "Failed to load payment records.", "error");
             }
         },
 
@@ -561,8 +579,6 @@ export const useAppStore = create<AppState>()(
             return currentState;
         }
 
-        // Only extract allowed keys from persisted state to prevent pollution
-        // This is crucial to avoid loading stale 'orders' or 'products' from previous versions
         const { cart, settings } = persistedState;
 
         let safeCart: CartItem[] = [];
@@ -576,14 +592,12 @@ export const useAppStore = create<AppState>()(
 
         const mergedSettings = settings || currentState.settings;
 
-        // Force a fresh state for everything else by spreading currentState first
         const merged = { 
             ...currentState, 
             cart: safeCart, 
             settings: mergedSettings 
         };
         
-        // Re-calculate derived values
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
         return merged;
