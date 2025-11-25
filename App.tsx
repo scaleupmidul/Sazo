@@ -1,11 +1,15 @@
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
+import { LoaderCircle } from 'lucide-react';
+
+// Eager load HomePage for better LCP (Largest Contentful Paint)
+import HomePage from './pages/HomePage';
 
 // Initialize the dataLayer for analytics
 declare global {
@@ -13,24 +17,34 @@ declare global {
 }
 window.dataLayer = window.dataLayer || [];
 
-// Statically import all pages to remove loading indicators during navigation
-import HomePage from './pages/HomePage';
-import ShopPage from './pages/ShopPage';
-import ProductDetailsPage from './pages/ProductDetailsPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import ContactPage from './pages/ContactPage';
-import PolicyPage from './pages/PolicyPage';
-import ThankYouPage from './pages/ThankYouPage';
-import AdminLoginPage from './pages/admin/AdminLoginPage';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminProductsPage from './pages/admin/AdminProductsPage';
-import AdminOrdersPage from './pages/admin/AdminOrdersPage';
-import AdminMessagesPage from './pages/admin/AdminMessagesPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminPaymentInfoPage from './pages/admin/AdminPaymentInfoPage';
+// Lazy load other pages to reduce bundle size
+const ShopPage = React.lazy(() => import('./pages/ShopPage'));
+const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
+const CartPage = React.lazy(() => import('./pages/CartPage'));
+const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
+const ThankYouPage = React.lazy(() => import('./pages/ThankYouPage'));
 
+// Admin Pages
+const AdminLoginPage = React.lazy(() => import('./pages/admin/AdminLoginPage'));
+const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminProductsPage = React.lazy(() => import('./pages/admin/AdminProductsPage'));
+const AdminOrdersPage = React.lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminMessagesPage = React.lazy(() => import('./pages/admin/AdminMessagesPage'));
+const AdminSettingsPage = React.lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminPaymentInfoPage = React.lazy(() => import('./pages/admin/AdminPaymentInfoPage'));
+
+// Loading Fallback Component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center space-y-4">
+      <LoaderCircle className="w-10 h-10 text-pink-600 animate-spin" />
+      <p className="text-stone-500 text-sm font-medium animate-pulse">Loading...</p>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const path = useAppStore(state => state.path);
@@ -46,10 +60,6 @@ const App: React.FC = () => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1];
-        // FIX: This guard prevents an infinite re-render loop.
-        // It checks if the currently selected product already matches the one in the URL.
-        // This is crucial because the `products` array is a new instance on each fetch,
-        // which would otherwise cause this effect to re-run and re-set the state continuously.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -64,7 +74,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const BASE_TITLE = 'SAZO';
-    let pageTitle = BASE_TITLE; // Default title
+    let pageTitle = BASE_TITLE; 
 
     const productMatch = path.match(/^\/product\/(.+)$/);
     const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
@@ -112,7 +122,6 @@ const App: React.FC = () => {
   const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
-     // This function returns the component for a the current admin path, to be rendered inside AdminLayout.
      if (path === '/admin/dashboard') return <AdminDashboardPage />;
      if (path === '/admin/products') return <AdminProductsPage />;
      if (path === '/admin/orders') return <AdminOrdersPage />;
@@ -120,52 +129,78 @@ const App: React.FC = () => {
      if (path === '/admin/settings') return <AdminSettingsPage />;
      if (path === '/admin/payment-info') return <AdminPaymentInfoPage />;
      
-     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
-    // Standalone admin login page (no layout)
     if (path === '/admin/login') {
       return <AdminLoginPage />;
     }
 
-    // All other admin pages are wrapped in the layout
     if (path.startsWith('/admin')) {
       return (
         <AdminLayout>
-            {renderAdminPageContent()}
+            <Suspense fallback={<PageLoader />}>
+                {renderAdminPageContent()}
+            </Suspense>
         </AdminLayout>
       );
     }
     
-    // Customer-facing pages
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
-      return <ProductDetailsPage />;
+      return (
+        <Suspense fallback={<PageLoader />}>
+            <ProductDetailsPage />
+        </Suspense>
+      );
     }
 
     const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
     if (thankYouMatch) {
         const orderId = thankYouMatch[1];
-        return <ThankYouPage orderId={orderId} />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <ThankYouPage orderId={orderId} />
+            </Suspense>
+        );
     }
 
     switch (path) {
       case '/':
+        // HomePage is now eagerly loaded, no Suspense needed
         return <HomePage />;
       case '/shop':
-        return <ShopPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <ShopPage />
+            </Suspense>
+        );
       case '/cart':
-        return <CartPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <CartPage />
+            </Suspense>
+        );
       case '/checkout':
-        return <CheckoutPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <CheckoutPage />
+            </Suspense>
+        );
       case '/contact':
-        return <ContactPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <ContactPage />
+            </Suspense>
+        );
       case '/policy':
-        return <PolicyPage />;
+        return (
+            <Suspense fallback={<PageLoader />}>
+                <PolicyPage />
+            </Suspense>
+        );
       default:
-        // For any other path, show the home page. A 404 page could be added here.
         return <HomePage />;
     }
   };
@@ -200,7 +235,6 @@ const App: React.FC = () => {
           h2, .font-display-lg { font-weight: 600; }
           h3, .font-display-md { font-weight: 600; }
 
-          /* Override browser autofill styles */
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
           input:-webkit-autofill:focus, 
@@ -232,7 +266,6 @@ const App: React.FC = () => {
           }
           .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
 
-          /* New Animations for Hero Slider */
           @keyframes fadeInUp {
               from { opacity: 0; transform: translateY(20px); }
               to { opacity: 1; transform: translateY(0); }
@@ -242,7 +275,6 @@ const App: React.FC = () => {
           .text-shadow { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
           .text-shadow-md { text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
-          /* WhatsApp Pulse Animation */
           @keyframes pulse-whatsapp {
             0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(219, 39, 119, 0); }
