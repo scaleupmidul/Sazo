@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { ShoppingCart, ChevronDown, X } from 'lucide-react';
@@ -45,13 +46,14 @@ const ProductDetailsPageSkeleton: React.FC = () => (
 );
 
 const ProductDetailsPage: React.FC = () => {
-  const { product, settings, navigate, addToCart, notify, loading } = useAppStore(state => ({
+  const { product, settings, navigate, addToCart, notify, loading, fetchProductDetails } = useAppStore(state => ({
     product: state.selectedProduct,
     settings: state.settings,
     navigate: state.navigate,
     addToCart: state.addToCart,
     notify: state.notify,
-    loading: state.loading
+    loading: state.loading,
+    fetchProductDetails: state.fetchProductDetails
   }));
 
   const [selectedImage, setSelectedImage] = useState(product?.images[0]);
@@ -59,6 +61,14 @@ const ProductDetailsPage: React.FC = () => {
   const isFreeSizeOnly = product?.sizes.length === 1 && product.sizes[0] === 'Free';
   const [selectedSize, setSelectedSize] = useState<string | null>(isFreeSizeOnly ? 'Free' : null);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+
+  // Ensure we have the full details (all images) when mounting
+  useEffect(() => {
+    if (product?.id) {
+        // This fetches the full data including all images from the backend
+        fetchProductDetails(product.id);
+    }
+  }, [product?.id]);
 
   useEffect(() => {
     if (product) {
@@ -70,6 +80,9 @@ const ProductDetailsPage: React.FC = () => {
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
             event: 'view_item',
+            page_location: window.location.href,
+            page_path: window.location.pathname,
+            page_title: document.title,
             ecommerce: {
                 currency: 'BDT',
                 items: [{
