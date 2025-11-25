@@ -1,3 +1,4 @@
+
 import express from 'express';
 import Product from '../models/Product.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -37,16 +38,47 @@ router.get('/admin', protect, async (req, res) => {
 });
 
 
-// @desc    Fetch all products
+// @desc    Fetch all products (Lite Version for Shop Page)
 // @route   GET /api/products
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find({}).sort({ createdAt: -1 });
-    res.json(products);
+    // LITE MODE: We don't need 5 images per product for the shop list.
+    // Fetching all fields but will filter images in memory before sending.
+    const products = await Product.find({}).sort({ createdAt: -1 }).lean();
+    
+    const liteProducts = products.map(p => {
+        // Convert _id to id
+        const { _id, __v, ...rest } = p;
+        const product = { id: _id.toString(), ...rest };
+        
+        // Only send the first image
+        if (product.images && product.images.length > 1) {
+            product.images = [product.images[0]];
+        }
+        return product;
+    });
+
+    res.json(liteProducts);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
+});
+
+// @desc    Fetch single product details
+// @route   GET /api/products/:id
+// @access  Public
+router.get('/:id', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (product) {
+            res.json(product);
+        } else {
+            res.status(404).json({ message: 'Product not found' });
+        }
+    } catch (error) {
+        res.status(404).json({ message: 'Product not found' });
+    }
 });
 
 // @desc    Create a product
