@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAppStore } from '../store';
 
@@ -31,18 +29,13 @@ const HeroSlider: React.FC = () => {
         setLoadedSlides(prev => ({...prev, [index]: true}));
     }
 
-    // Show Big Skeleton while loading settings OR if no slides are found
-    // This removes the ugly text and keeps the layout consistent
     if (loading || totalSlides === 0) {
         return (
             <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse">
                 <div className="absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16">
                     <div className="max-w-md space-y-4 w-full">
-                        {/* Title Skeleton */}
                         <div className="h-10 sm:h-14 bg-stone-300 rounded w-3/4"></div>
-                        {/* Subtitle Skeleton */}
                         <div className="h-4 sm:h-6 bg-stone-300 rounded w-1/2"></div>
-                        {/* Button Skeleton */}
                         <div className="h-10 sm:h-12 bg-stone-300 rounded-full w-32 mt-6"></div>
                     </div>
                 </div>
@@ -66,10 +59,13 @@ const HeroSlider: React.FC = () => {
                             <img
                                 src={slide.image}
                                 alt={slide.title}
-                                className="object-cover w-full h-full transition-opacity duration-500"
+                                className="object-cover w-full h-full"
                                 onLoad={() => handleImageLoad(index)}
+                                // Optimization: First image loads eagerly with high priority for LCP on Mobile
+                                loading={index === 0 ? "eager" : "lazy"}
+                                fetchPriority={index === 0 ? "high" : "auto"}
                                 decoding="async"
-                                style={{ opacity: loadedSlides[index] ? 1 : 0 }}
+                                style={{ opacity: loadedSlides[index] ? 1 : 0, transition: 'opacity 0.5s' }}
                             />
                         </picture>
                         <div className={`absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent transition-opacity duration-300 ${loadedSlides[index] ? 'opacity-100' : 'opacity-0'}`}></div>
