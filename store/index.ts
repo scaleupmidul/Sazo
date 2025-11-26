@@ -49,8 +49,10 @@ export const useAppStore = create<AppState>()(
         },
 
         loadInitialData: async () => {
-            set({ loading: true });
+            // Optimization: Do NOT set loading to true initially if we have data.
+            // This allows the app to show cached content immediately (Stale-While-Revalidate).
             const { isAdminAuthenticated, notify } = get();
+            
             try {
                 // Fetch optimized homepage data first for a fast initial load
                 const homeDataRes = await fetch(`${API_URL}/page-data/home`);
@@ -58,10 +60,12 @@ export const useAppStore = create<AppState>()(
                     throw new Error('Failed to fetch initial page data.');
                 }
                 const homeData = await homeDataRes.json();
+                
                 set({
                     products: homeData.products,
                     settings: homeData.settings,
                     fullProductsLoaded: false,
+                    loading: false // Ensure loading is set to false as soon as data arrives
                 });
 
                 // If admin is logged in, fetch admin-specific data including stats
@@ -100,9 +104,10 @@ export const useAppStore = create<AppState>()(
                 }
             } catch (error) {
                 console.error("Failed to load initial data", error);
-                notify("Could not connect to the server.", "error");
-            } finally {
+                // Don't notify error immediately on home page to avoid scaring users if offline/cached
+                // notify("Could not connect to the server.", "error");
                 set({ loading: false });
+            } finally {
                 // After the initial UI render is unblocked, start fetching the rest of the products in the background.
                 setTimeout(() => {
                     get().ensureAllProductsLoaded();
@@ -128,7 +133,7 @@ export const useAppStore = create<AppState>()(
                 set({ products: mergedProducts, fullProductsLoaded: true });
             } catch (error) {
                 console.error("Failed to load all products", error);
-                notify("Could not load all products.", "error");
+                // silent fail for background fetch
             }
         },
 
@@ -481,8 +486,12 @@ export const useAppStore = create<AppState>()(
     {
       name: 'sazo-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only persist the 'cart' slice of the state
-      partialize: (state) => ({ cart: state.cart }),
+      // Persist critical data for instant loading
+      partialize: (state) => ({ 
+          cart: state.cart,
+          settings: state.settings,
+          products: state.products
+      }),
       // Custom merge function to recalculate cartTotal on rehydration and validate data
       merge: (persistedState: any, currentState: AppState) => {
         // Safety check: if persisted state is not an object or null, ignore it
