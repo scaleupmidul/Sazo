@@ -1,12 +1,17 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { Order } from '../../types';
 import { Search, Trash2 } from 'lucide-react';
 
 const AdminPaymentInfoPage: React.FC = () => {
-    const { orders, deleteOrder } = useAppStore();
+    const { orders, deleteOrder, refreshAdminData } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Ensure fresh data is loaded when accessing this page
+    useEffect(() => {
+        refreshAdminData();
+    }, [refreshAdminData]);
 
     const paymentRecords = useMemo(() => {
         return orders
