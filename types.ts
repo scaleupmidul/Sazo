@@ -1,5 +1,4 @@
 
-
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -41,10 +40,8 @@ export interface Order {
   city: string;
   cartItems: CartItem[];
   total: number;
-  deliveryCharge?: number; // Added field to store selected delivery charge
   status: OrderStatus;
   date: string;
-  createdAt?: string; // Added timestamp for precise time display
   paymentMethod: 'COD' | 'Online';
   paymentDetails?: {
     paymentNumber: string;
@@ -142,19 +139,11 @@ export interface AdminProductsResponse {
   total: number;
 }
 
-export interface PaginationInfo {
-  page: number;
-  pages: number;
-  total: number;
-}
-
 export interface DashboardStats {
-  totalProducts: number;
-  totalOrders: number;
-  totalRevenue: number;
-  onlineTransactionsCount: number;
-  recentOrders: Order[];
-  recentPayments: Order[];
+    totalOrders: number;
+    onlineTransactions: number;
+    totalRevenue: number;
+    totalProducts: number;
 }
 
 export interface AppState {
@@ -173,14 +162,9 @@ export interface AppState {
   cartTotal: number;
   selectedProduct: Product | null;
   setSelectedProduct: (product: Product | null) => void;
-  fetchProductDetails: (id: string) => Promise<void>;
   notification: Notification | null;
   notify: (message: string, type?: 'success' | 'error') => void;
-  
-  // Orders
-  orders: Order[]; // This now holds the current page of orders
-  ordersPagination: PaginationInfo;
-  loadAdminOrders: (page: number, searchTerm?: string, paymentMethod?: string) => Promise<void>;
+  orders: Order[];
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   addOrder: (
     customerDetails: { name: string; phone: string; address: string; city: string; }, 
@@ -194,39 +178,24 @@ export interface AppState {
             amount: number;
             transactionId: string;
         }
-    },
-    deliveryCharge: number // Added parameter
+    }
   ) => Promise<Order>;
   deleteOrder: (orderId: string) => Promise<void>;
-
-  // Payment Records (Separated from Orders to avoid state conflict)
-  paymentRecords: Order[];
-  paymentRecordsPagination: PaginationInfo;
-  loadPaymentRecords: (page: number, searchTerm?: string) => Promise<void>;
-  
-  // Admin Auth & Dashboard
   isAdminAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  dashboardStats: DashboardStats | null;
-  loadDashboardStats: () => Promise<void>;
-  
-  // Messages
   contactMessages: ContactMessage[];
   addContactMessage: (messageData: Omit<ContactMessage, 'id' | 'date' | 'isRead'>) => Promise<void>;
   markMessageAsRead: (messageId: string, isRead: boolean) => Promise<void>;
   deleteContactMessage: (messageId: string) => Promise<void>;
-  
-  // General State
   loading: boolean;
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
   loadInitialData: () => Promise<void>;
   fullProductsLoaded: boolean;
   ensureAllProductsLoaded: () => Promise<void>;
-  
-  // Admin Products
   adminProducts: Product[];
   adminProductsPagination: AdminProductsPagination;
   loadAdminProducts: (page: number, searchTerm: string) => Promise<void>;
+  dashboardStats: DashboardStats | null;
 }
