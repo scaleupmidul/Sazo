@@ -1,5 +1,4 @@
 
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -39,6 +38,7 @@ export const useAppStore = create<AppState>()(
         adminProducts: [],
         adminProductsPagination: { page: 1, pages: 1, total: 0 },
         dashboardStats: null,
+        newOrdersCount: 0,
         
         navigate: (newPath: string) => {
             if (window.location.pathname !== newPath) {
@@ -82,10 +82,20 @@ export const useAppStore = create<AppState>()(
                     const messagesData = await messagesRes.json();
                     const statsData = await statsRes.json();
                     
+                    // Calculate new orders count based on last seen timestamp
+                    const lastSeenOrders = localStorage.getItem('sazo_admin_last_orders_seen');
+                    const lastSeenOrdersDate = lastSeenOrders ? new Date(lastSeenOrders) : new Date(0);
+                    const newOrders = ordersData.filter((o: Order) => {
+                        // Use createdAt if available, otherwise fallback to date
+                        const oDate = o.createdAt ? new Date(o.createdAt) : new Date(o.date);
+                        return oDate > lastSeenOrdersDate;
+                    });
+
                     set({ 
                         orders: ordersData, 
                         contactMessages: messagesData,
-                        dashboardStats: statsData 
+                        dashboardStats: statsData,
+                        newOrdersCount: newOrders.length
                     });
                 }
             } catch (error) {
@@ -363,19 +373,33 @@ export const useAppStore = create<AppState>()(
                 });
                 if (!res.ok) throw new Error('Failed to fetch orders');
                 const ordersData = await res.json();
-                set({ orders: ordersData });
+                
+                // Recalculate new orders count on refresh
+                const lastSeenOrders = localStorage.getItem('sazo_admin_last_orders_seen');
+                const lastSeenOrdersDate = lastSeenOrders ? new Date(lastSeenOrders) : new Date(0);
+                const newOrders = ordersData.filter((o: Order) => {
+                    const oDate = o.createdAt ? new Date(o.createdAt) : new Date(o.date);
+                    return oDate > lastSeenOrdersDate;
+                });
+
+                set({ orders: ordersData, newOrdersCount: newOrders.length });
                 get().notify('Orders list refreshed.', 'success');
             } catch (error) {
                 console.error("Failed to refresh orders", error);
                 get().notify("Could not refresh orders.", "error");
             }
         },
+        
+        markOrdersAsSeen: () => {
+            localStorage.setItem('sazo_admin_last_orders_seen', new Date().toISOString());
+            set({ newOrdersCount: 0 });
+        },
 
-        addOrder: async (customerDetails, cartItems, total, paymentInfo) => {
+        addOrder: async (customerDetails, cartItems, total, paymentInfo, shippingCharge) => {
             const res = await fetch(`${API_URL}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo }),
+                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo, shippingCharge }),
             });
             
             if (!res.ok) {
