@@ -1,10 +1,10 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
+import { LoaderCircle } from 'lucide-react';
 
 // Initialize the dataLayer for analytics
 declare global {
@@ -12,24 +12,38 @@ declare global {
 }
 window.dataLayer = window.dataLayer || [];
 
-// Statically import all pages to remove loading indicators during navigation
-import HomePage from './pages/HomePage';
-import ShopPage from './pages/ShopPage';
-import ProductDetailsPage from './pages/ProductDetailsPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import ContactPage from './pages/ContactPage';
-import PolicyPage from './pages/PolicyPage';
-import ThankYouPage from './pages/ThankYouPage';
-import AdminLoginPage from './pages/admin/AdminLoginPage';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminProductsPage from './pages/admin/AdminProductsPage';
-import AdminOrdersPage from './pages/admin/AdminOrdersPage';
-import AdminMessagesPage from './pages/admin/AdminMessagesPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminPaymentInfoPage from './pages/admin/AdminPaymentInfoPage';
+// --- PERFORMANCE OPTIMIZATION: LAZY LOADING ---
+// Instead of importing all pages at the top (which creates a huge bundle),
+// we load them only when needed. This significantly improves FCP and TBT on mobile.
 
+const HomePage = lazy(() => import('./pages/HomePage'));
+const ShopPage = lazy(() => import('./pages/ShopPage'));
+const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const PolicyPage = lazy(() => import('./pages/PolicyPage'));
+const ThankYouPage = lazy(() => import('./pages/ThankYouPage'));
+
+// Admin pages are heavy, lazy load them to keep the customer experience fast
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminMessagesPage = lazy(() => import('./pages/admin/AdminMessagesPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminPaymentInfoPage = lazy(() => import('./pages/admin/AdminPaymentInfoPage'));
+
+// A simple, lightweight loading spinner for page transitions
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh] w-full">
+    <div className="flex flex-col items-center space-y-3">
+        <LoaderCircle className="w-10 h-10 text-pink-600 animate-spin" />
+        <p className="text-stone-500 text-sm font-medium animate-pulse">Loading...</p>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const path = useAppStore(state => state.path);
@@ -47,7 +61,6 @@ const App: React.FC = () => {
         // Sanitize ID: Remove any query parameters (e.g., ?fbclid=...)
         const productId = productMatch[1].split('?')[0];
         
-        // FIX: This guard prevents an infinite re-render loop.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -62,7 +75,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const BASE_TITLE = 'SAZO';
-    let pageTitle = BASE_TITLE; // Default title
+    let pageTitle = BASE_TITLE; 
 
     const productMatch = path.match(/^\/product\/(.+)$/);
     const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
@@ -128,7 +141,9 @@ const App: React.FC = () => {
     if (path.startsWith('/admin')) {
       return (
         <AdminLayout>
-            {renderAdminPageContent()}
+            <Suspense fallback={<PageLoader />}>
+                {renderAdminPageContent()}
+            </Suspense>
         </AdminLayout>
       );
     }
@@ -247,7 +262,10 @@ const App: React.FC = () => {
       <Notification notification={notification} />
       {isCustomerPage && <Header />}
       <div className="flex-grow flex flex-col">
-          {renderPage()}
+          {/* Wrap all routes in Suspense to handle lazy loaded components */}
+          <Suspense fallback={<PageLoader />}>
+            {renderPage()}
+          </Suspense>
       </div>
       {isCustomerPage && showWhatsAppButton && <WhatsAppButton />}
       {isCustomerPage && <Footer />}
