@@ -40,8 +40,10 @@ export interface Order {
   city: string;
   cartItems: CartItem[];
   total: number;
+  shippingCharge?: number; // Explicitly store the shipping charge
   status: OrderStatus;
   date: string;
+  createdAt?: string; // Added for tracking new orders
   paymentMethod: 'COD' | 'Online';
   paymentDetails?: {
     paymentNumber: string;
@@ -178,7 +180,8 @@ export interface AppState {
             amount: number;
             transactionId: string;
         }
-    }
+    },
+    shippingCharge: number // Added shippingCharge parameter
   ) => Promise<Order>;
   deleteOrder: (orderId: string) => Promise<void>;
   isAdminAuthenticated: boolean;
@@ -199,4 +202,6 @@ export interface AppState {
   loadAdminProducts: (page: number, searchTerm: string) => Promise<void>;
   dashboardStats: DashboardStats | null;
   refreshOrders: () => Promise<void>;
+  newOrdersCount: number;
+  markOrdersAsSeen: () => void;
 }
