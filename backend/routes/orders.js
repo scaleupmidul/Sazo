@@ -1,50 +1,49 @@
 
-
-
 import express from 'express';
 import Order from '../models/Order.js';
+import Product from '../models/Product.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// @desc    Fetch paginated orders for admin
+// @desc    Get dashboard stats
+// @route   GET /api/orders/stats
+// @access  Private/Admin
+router.get('/stats', protect, async (req, res) => {
+    try {
+        const totalOrders = await Order.countDocuments();
+        const onlineTransactions = await Order.countDocuments({ paymentMethod: 'Online' });
+        
+        // Revenue: sum of total field where status != 'Cancelled'
+        const revenueResult = await Order.aggregate([
+            { $match: { status: { $ne: 'Cancelled' } } },
+            { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
+        ]);
+        const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+
+        const totalProducts = await Product.countDocuments();
+
+        res.json({
+            totalOrders,
+            onlineTransactions,
+            totalRevenue,
+            totalProducts
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// @desc    Fetch all orders
 // @route   GET /api/orders
 // @access  Private/Admin
 router.get('/', protect, async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-    const search = req.query.search || '';
-    const paymentMethod = req.query.paymentMethod; // Optional filter for payment info page
-
-    const query = {};
-    if (search) {
-        // Efficient regex search
-        query.$or = [
-            { customerName: { $regex: search, $options: 'i' } },
-            { orderId: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } }
-        ];
-    }
-    if (paymentMethod) {
-        query.paymentMethod = paymentMethod;
-    }
-
-    const count = await Order.countDocuments(query);
-    const orders = await Order.find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit);
-
-    res.json({ 
-        orders, 
-        page, 
-        pages: Math.ceil(count / limit), 
-        total: count 
-    });
+    const orders = await Order.find({}).sort({ createdAt: -1 });
+    res.json(orders);
   } catch (error) {
-    console.error("Orders fetch error:", error);
-    res.status(500).json({ message: 'Server Error fetching orders' });
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -78,7 +77,7 @@ router.get('/:id', async (req, res) => {
 // @access  Public
 router.post('/', async (req, res) => {
   try {
-    const { customerDetails, cartItems, total, paymentInfo, deliveryCharge } = req.body;
+    const { customerDetails, cartItems, total, paymentInfo } = req.body;
     
     if (!cartItems || cartItems.length === 0) {
         return res.status(400).json({ message: 'Cart is empty' });
@@ -97,17 +96,15 @@ router.post('/', async (req, res) => {
         }
     }
 
-    // Fallback defaults to prevent crashes if frontend sends partial objects
     const newOrderData = {
         orderId: uniqueId,
-        customerName: customerDetails?.name || 'Unknown',
-        phone: customerDetails?.phone || '',
-        address: customerDetails?.address || '',
-        city: customerDetails?.city || '',
+        customerName: customerDetails?.name,
+        phone: customerDetails?.phone,
+        address: customerDetails?.address,
+        city: customerDetails?.city || '', // Default to empty string if missing
         cartItems: cartItems,
         total: total,
-        deliveryCharge: deliveryCharge || 0,
-        paymentMethod: paymentInfo?.paymentMethod || 'COD',
+        paymentMethod: paymentInfo?.paymentMethod,
         paymentDetails: paymentInfo?.paymentDetails,
         date: new Date().toISOString().split('T')[0],
         status: 'Pending',
