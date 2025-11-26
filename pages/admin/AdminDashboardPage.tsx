@@ -28,11 +28,17 @@ const StatCard: React.FC<{ title: string, value: string, icon: React.ElementType
 
 const AdminDashboardPage: React.FC = () => {
     const { products, orders, navigate } = useAppStore();
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    const recentOrders = [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    // Safe reduce with initial check
+    const totalRevenue = (orders || []).reduce((sum, order) => sum + (order.total || 0), 0);
     
-    const onlineTransactionsCount = orders.filter(o => o.paymentMethod === 'Online').length;
-    const recentPaymentRecords = orders
+    // Safe sort and slice
+    const recentOrders = [...(orders || [])]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 5);
+    
+    const onlineTransactionsCount = (orders || []).filter(o => o.paymentMethod === 'Online').length;
+    
+    const recentPaymentRecords = (orders || [])
         .filter(o => o.paymentMethod === 'Online' && o.paymentDetails)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
@@ -42,8 +48,8 @@ const AdminDashboardPage: React.FC = () => {
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Total Products" value={products.length.toString()} icon={ShoppingBag} />
-                <StatCard title="Total Orders" value={orders.length.toString()} icon={ListOrdered} />
+                <StatCard title="Total Products" value={(products || []).length.toString()} icon={ShoppingBag} />
+                <StatCard title="Total Orders" value={(orders || []).length.toString()} icon={ListOrdered} />
                 <StatCard title="Total Revenue" value={`৳${totalRevenue.toLocaleString('en-IN')}`} icon={DollarSign} />
                 <StatCard title="Online Transactions" value={onlineTransactionsCount.toString()} icon={CreditCard} />
             </div>
@@ -66,7 +72,7 @@ const AdminDashboardPage: React.FC = () => {
                                     <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/admin/orders')}>
                                         <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                                         <td className="px-6 py-4">{order.customerName}</td>
-                                        <td className="px-6 py-4">৳{order.total.toLocaleString()}</td>
+                                        <td className="px-6 py-4">৳{(order.total || 0).toLocaleString()}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
                                                 {order.status}
@@ -74,6 +80,9 @@ const AdminDashboardPage: React.FC = () => {
                                         </td>
                                     </tr>
                                 ))}
+                                {recentOrders.length === 0 && (
+                                    <tr><td colSpan={4} className="px-6 py-4 text-center text-gray-500">No orders found</td></tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -95,10 +104,14 @@ const AdminDashboardPage: React.FC = () => {
                                     <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/admin/payment-info')}>
                                         <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                                         <td className="px-6 py-4">{order.customerName}</td>
-                                        <td className="px-6 py-4 font-semibold">৳{order.paymentDetails?.amount.toLocaleString()}</td>
-                                        <td className="px-6 py-4 truncate max-w-xs font-mono text-xs">{order.paymentDetails?.transactionId}</td>
+                                        {/* FIX: Safely handle amount rendering to prevent crash */}
+                                        <td className="px-6 py-4 font-semibold">৳{(order.paymentDetails?.amount || 0).toLocaleString()}</td>
+                                        <td className="px-6 py-4 truncate max-w-xs font-mono text-xs">{order.paymentDetails?.transactionId || 'N/A'}</td>
                                     </tr>
                                 ))}
+                                 {recentPaymentRecords.length === 0 && (
+                                    <tr><td colSpan={4} className="px-6 py-4 text-center text-gray-500">No payment records found</td></tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
