@@ -95,9 +95,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
 };
 
 const AdminOrdersPage: React.FC = () => {
-  const { orders, updateOrderStatus, deleteOrder } = useAppStore();
+  const { orders, updateOrderStatus, deleteOrder, refreshAdminData } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Ensure fresh data is loaded when accessing this page
+  useEffect(() => {
+      refreshAdminData();
+  }, [refreshAdminData]);
 
   useEffect(() => {
     // This effect syncs the selected order with the main orders list.
@@ -157,7 +162,7 @@ const AdminOrdersPage: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredOrders.map(order => (
+                    {filteredOrders.length > 0 ? filteredOrders.map(order => (
                         <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                             <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                             <td className="px-6 py-4">
@@ -172,7 +177,11 @@ const AdminOrdersPage: React.FC = () => {
                                 </span>
                             </td>
                         </tr>
-                    ))}
+                    )) : (
+                        <tr>
+                            <td colSpan={5} className="px-6 py-10 text-center text-gray-500">No orders found.</td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
         </div>
