@@ -1,52 +1,20 @@
 
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard, Eye, RefreshCcw } from 'lucide-react';
+import { Search, X, Trash2 } from 'lucide-react';
+// FIX: Corrected the import path for `useAppStore` from the non-existent 'StoreContext.tsx' to the correct location 'store/index.ts'.
 import { useAppStore } from '../../store';
-import TableSkeleton from '../../components/admin/TableSkeleton';
 
-const getStatusBadge = (status: OrderStatus) => {
-    const styles = {
-        'Pending': 'bg-amber-50 text-amber-700 border-amber-200 ring-amber-500/10',
-        'Confirmed': 'bg-blue-50 text-blue-700 border-blue-200 ring-blue-500/10',
-        'Shipped': 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-indigo-500/10',
-        'Delivered': 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-500/10',
-        'Cancelled': 'bg-rose-50 text-rose-700 border-rose-200 ring-rose-500/10',
-    };
-    const style = styles[status] || 'bg-slate-50 text-slate-700 border-slate-200';
-
-    return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${style}`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${style.replace('bg-', 'bg-current text-opacity-50 ')}`}></span>
-            {status}
-        </span>
-    );
+const getStatusColor = (status: OrderStatus) => {
+    switch (status) {
+        case 'Pending': return 'bg-yellow-100 text-yellow-800';
+        case 'Confirmed': return 'bg-blue-100 text-blue-800';
+        case 'Shipped': return 'bg-indigo-100 text-indigo-800';
+        case 'Delivered': return 'bg-green-100 text-green-800';
+        case 'Cancelled': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
 }
-
-// Helper to format date and time in Bangladesh Time
-const getFormattedDateTime = (isoString?: string) => {
-    if (!isoString) return { date: 'N/A', time: '' };
-    const dateObj = new Date(isoString);
-    
-    // Format Date: 24 Nov 2025
-    const date = dateObj.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Asia/Dhaka'
-    });
-
-    // Format Time: 05:30 PM
-    const time = dateObj.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Dhaka'
-    });
-
-    return { date, time };
-};
 
 interface OrderDetailsModalProps {
   order: Order;
@@ -67,132 +35,59 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
         }
     }
 
-    const { date, time } = getFormattedDateTime(order.createdAt || order.date);
+    // Display ID: Use orderId if available, otherwise fallback to system id
+    const displayId = order.orderId || order.id;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] overflow-hidden animate-scaleIn">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-lg font-bold text-slate-800">Order #{order.orderId || order.id}</h2>
-                        {getStatusBadge(order.status)}
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
-                        <X className="w-5 h-5" />
-                    </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-black">Order Details: {displayId}</h2>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><X className="w-5 h-5"/></button>
                 </div>
-                
-                <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar bg-white">
-                    {/* Customer & Order Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                                <User className="w-4 h-4 text-pink-600" /> Customer Details
-                            </h3>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <User className="w-4 h-4 text-slate-400 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">{order.customerName}</p>
-                                        <p className="text-xs text-slate-500">Customer</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">{order.phone}</p>
-                                        <p className="text-xs text-slate-500">Contact</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">{order.address}</p>
-                                        {order.city && <p className="text-xs text-slate-500">{order.city}</p>}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                         <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                                <CreditCard className="w-4 h-4 text-pink-600" /> Order Info
-                            </h3>
-                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-500 flex items-center gap-2"><Calendar className="w-3.5 h-3.5"/> Placed On</span>
-                                    <div className="text-right">
-                                        <p className="text-sm font-medium text-slate-800">{date}</p>
-                                        <p className="text-xs text-slate-500">{time}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-500">Payment</span>
-                                    <span className="text-sm font-medium text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">{order.paymentMethod}</span>
-                                </div>
-                                 <div className="flex items-center justify-between pt-2 border-t border-slate-200 mt-2">
-                                    <span className="text-sm font-bold text-slate-700">Update Status</span>
-                                    <select 
-                                        value={order.status} 
-                                        onChange={handleStatusChange} 
-                                        className="text-sm border-slate-300 rounded-lg shadow-sm focus:border-pink-500 focus:ring-pink-500 py-1.5 pl-3 pr-8 bg-white"
-                                    >
-                                        <option value="Pending">Pending</option>
-                                        <option value="Confirmed">Confirmed</option>
-                                        <option value="Shipped">Shipped</option>
-                                        <option value="Delivered">Delivered</option>
-                                        <option value="Cancelled">Cancelled</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Items List */}
+                <div className="p-6 space-y-6 overflow-y-auto text-black">
                     <div>
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4">Order Items</h3>
-                        <div className="border border-slate-200 rounded-xl overflow-hidden">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 text-slate-500 font-medium">
-                                    <tr>
-                                        <th className="px-4 py-3">Product</th>
-                                        <th className="px-4 py-3">Size</th>
-                                        <th className="px-4 py-3 text-center">Qty</th>
-                                        <th className="px-4 py-3 text-right">Price</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {(order.cartItems || []).map((item: CartItem, index) => (
-                                        <tr key={`${item.id}-${index}`} className="bg-white">
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-100" />
-                                                    <span className="font-medium text-slate-900">{item.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-600">{item.size}</td>
-                                            <td className="px-4 py-3 text-center text-slate-600">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right font-medium text-slate-900">৳{(item.price * item.quantity).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="bg-slate-50">
-                                    <tr>
-                                        <td colSpan={3} className="px-4 py-3 text-right font-bold text-slate-700">Total Amount</td>
-                                        <td className="px-4 py-3 text-right font-bold text-pink-600 text-lg">৳{order.total.toLocaleString()}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        <h3 className="font-semibold text-pink-600 mb-2">Customer Information</h3>
+                        <p><span className="font-semibold">Name:</span> {order.customerName}</p>
+                        <p><span className="font-semibold">Phone:</span> {order.phone}</p>
+                        <p><span className="font-semibold">Address:</span> {`${order.address}, ${order.city}`}</p>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold text-pink-600 mb-2">Order Status</h3>
+                        <select value={order.status} onChange={handleStatusChange} className="p-2 border rounded-lg w-full md:w-1/2 bg-white text-black">
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-pink-600 mb-2">Items Ordered</h3>
+                        <div className="space-y-2">
+                        {(order.cartItems || []).map((item: CartItem) => (
+                            <div key={item.id} className="flex items-center space-x-4 border-b pb-2">
+                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded"/>
+                                <div className="flex-1">
+                                    <p className="font-semibold">{item.name}</p>
+                                    <p className="text-xs text-gray-500">Size: {item.size} | Qty: {item.quantity}</p>
+                                </div>
+                                <p className="font-semibold">৳{(item.price * item.quantity).toLocaleString()}</p>
+                            </div>
+                        ))}
+                        </div>
+                        <div className="text-right mt-4 font-bold text-lg">
+                            Total: ৳{order.total.toLocaleString()}
                         </div>
                     </div>
                 </div>
-                
-                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <button onClick={handleDelete} className="text-rose-600 hover:text-rose-700 text-sm font-medium flex items-center gap-2 px-3 py-2 hover:bg-rose-50 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4"/> Delete Order
+                <div className="p-4 bg-gray-50 border-t flex justify-between items-center">
+                    <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition flex items-center space-x-2">
+                        <Trash2 className="w-4 h-4"/>
+                        <span>Delete Order</span>
                     </button>
-                    <button onClick={onClose} className="px-5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-                        Close Details
+                    <button onClick={onClose} className="bg-gray-300 text-black px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Close
                     </button>
                 </div>
             </div>
@@ -201,179 +96,93 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
 };
 
 const AdminOrdersPage: React.FC = () => {
-  const { orders, ordersPagination, loadAdminOrders, updateOrderStatus, deleteOrder } = useAppStore();
+  const { orders, updateOrderStatus, deleteOrder } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  
-  // Use ID tracking instead of object reference to prevent render loops
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  
-  // SAFEGUARD: Ensure orders is always an array
-  const safeOrders = Array.isArray(orders) ? orders : [];
-  const selectedOrder = useMemo(() => safeOrders.find(o => o.id === selectedOrderId), [safeOrders, selectedOrderId]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Debounce search input
   useEffect(() => {
-    const handler = setTimeout(() => {
-        setDebouncedSearchTerm(searchTerm);
-        setCurrentPage(1);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const fetchOrders = async () => {
-    setIsLoading(true);
-    try {
-        await loadAdminOrders(currentPage, debouncedSearchTerm);
-        console.log("Orders fetch completed.");
-    } catch (error) {
-        console.error("Error fetching orders:", error);
-    } finally {
-        setIsLoading(false);
+    // This effect syncs the selected order with the main orders list.
+    // This is crucial for reflecting status updates in the modal in real-time.
+    if (selectedOrder) {
+      const updatedOrderInList = orders.find(o => o.id === selectedOrder.id);
+      if (updatedOrderInList) {
+        // Only update state if the order data has actually changed to prevent infinite loops.
+        if (JSON.stringify(updatedOrderInList) !== JSON.stringify(selectedOrder)) {
+            setSelectedOrder(updatedOrderInList);
+        }
+      } else {
+        // If the order is no longer in the list (e.g., deleted), close the modal.
+        setSelectedOrder(null);
+      }
     }
-  };
+  }, [orders, selectedOrder]);
 
-  // Fetch orders when dependencies change
-  useEffect(() => {
-    fetchOrders();
-  }, [currentPage, debouncedSearchTerm, loadAdminOrders]);
-
-  const PaginationControls = () => {
-    const { page, pages, total } = ordersPagination;
-    if (pages <= 1 && total === 0) return null;
-
-    return (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
-            <p className="text-sm text-slate-500">
-                Showing <span className="font-medium">{(page - 1) * 20 + 1}</span> to <span className="font-medium">{Math.min(page * 20, total)}</span> of <span className="font-medium">{total}</span> results
-            </p>
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                    disabled={page === 1}
-                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-slate-600"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 shadow-sm">{page} of {pages}</span>
-                <button 
-                    onClick={() => setCurrentPage(p => Math.min(pages, p + 1))} 
-                    disabled={page === pages}
-                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-slate-600"
-                >
-                    <ChevronRight className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-    );
-  };
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => 
+      (order.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (order.orderId || order.id || '').toLowerCase().includes(searchTerm.toLowerCase()) // Search by new numeric ID too
+    ).sort((a, b) => {
+        // Sort by Date Descending (Newest first)
+        const dateComparison = b.date.localeCompare(a.date);
+        if (dateComparison !== 0) return dateComparison;
+        // Fallback to ID Descending (assuming Mongo ID is roughly time-sequential)
+        return b.id.localeCompare(a.id);
+    });
+  }, [orders, searchTerm]);
 
   return (
-    <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
-                <p className="text-slate-500 text-sm mt-1">Track and manage customer orders.</p>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-                 <div className="relative w-full sm:w-72">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input 
-                        type="text"
-                        placeholder="Search by name, phone or ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
-                    />
-                </div>
-                <button 
-                    onClick={fetchOrders}
-                    className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-colors"
-                    title="Refresh Orders"
-                >
-                    <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
+    <div>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+            <div className="relative w-full md:w-64">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <input 
+                    type="text"
+                    placeholder="Search by name or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full p-2 pl-10 border rounded-lg text-sm bg-white text-black"
+                />
             </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th className="px-6 py-4 font-semibold">Order ID</th>
-                            <th className="px-6 py-4 font-semibold">Customer</th>
-                            <th className="px-6 py-4 font-semibold">Date</th>
-                            <th className="px-6 py-4 font-semibold">Total</th>
-                            <th className="px-6 py-4 font-semibold">Status</th>
-                            <th className="px-6 py-4 font-semibold text-right">Actions</th>
+        <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+            <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" className="px-6 py-3">Order ID</th>
+                        <th scope="col" className="px-6 py-3">Customer</th>
+                        <th scope="col" className="px-6 py-3">Date</th>
+                        <th scope="col" className="px-6 py-3">Total</th>
+                        <th scope="col" className="px-6 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredOrders.map(order => (
+                        <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                            <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
+                            <td className="px-6 py-4">
+                                <div>{order.customerName}</div>
+                                <div className="text-xs text-gray-500">{order.phone}</div>
+                            </td>
+                            <td className="px-6 py-4">{order.date}</td>
+                            <td className="px-6 py-4">৳{order.total.toLocaleString()}</td>
+                            <td className="px-6 py-4">
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                                    {order.status}
+                                </span>
+                            </td>
                         </tr>
-                    </thead>
-                    {isLoading ? (
-                        <TableSkeleton cols={6} rows={10} />
-                    ) : (
-                        <tbody className="divide-y divide-slate-100">
-                            {safeOrders.length > 0 ? (
-                                safeOrders.map(order => {
-                                    const { date, time } = getFormattedDateTime(order.createdAt || order.date);
-                                    return (
-                                        <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrderId(order.id)}>
-                                            <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-slate-900 font-medium">{order.customerName}</div>
-                                                <div className="text-xs text-slate-500">{order.phone}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-slate-700">{date}</span>
-                                                    <span className="text-xs text-slate-500">{time}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 font-semibold text-slate-800">৳{order.total.toLocaleString()}</td>
-                                            <td className="px-6 py-4">
-                                                {getStatusBadge(order.status)}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); setSelectedOrderId(order.id); }}
-                                                    className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-12 text-slate-400">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <Search className="w-10 h-10 mb-2 opacity-20" />
-                                            <p>No orders found.</p>
-                                            <p className="text-xs mt-1 text-slate-300">Try refreshing or checking your connection.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    )}
-                </table>
-            </div>
+                    ))}
+                </tbody>
+            </table>
         </div>
-        
-        <PaginationControls />
-
-        {selectedOrder && (
-            <OrderDetailsModal 
-                order={selectedOrder} 
-                onClose={() => setSelectedOrderId(null)} 
-                updateOrderStatus={updateOrderStatus}
-                deleteOrder={deleteOrder}
-            />
-        )}
+        {selectedOrder && <OrderDetailsModal 
+            order={selectedOrder} 
+            onClose={() => setSelectedOrder(null)} 
+            updateOrderStatus={updateOrderStatus}
+            deleteOrder={deleteOrder}
+        />}
     </div>
   );
 };
