@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ContactMessage } from '../../types';
 import { Search, X, Trash2, Mail, CheckCircle } from 'lucide-react';
 // FIX: Corrected the import path for `useAppStore` from the non-existent 'StoreContext.tsx' to the correct location 'store/index.ts'.
@@ -64,14 +63,9 @@ const MessageDetailsModal: React.FC<MessageDetailsModalProps> = ({ message, onCl
 };
 
 const AdminMessagesPage: React.FC = () => {
-  const { contactMessages, markMessageAsRead, deleteContactMessage, refreshAdminData } = useAppStore();
+  const { contactMessages, markMessageAsRead, deleteContactMessage } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
-
-  // Ensure fresh data is loaded when accessing this page
-  useEffect(() => {
-      refreshAdminData();
-  }, [refreshAdminData]);
 
   const filteredMessages = useMemo(() => {
     return [...contactMessages].filter(msg => 
@@ -107,7 +101,7 @@ const AdminMessagesPage: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredMessages.length > 0 ? filteredMessages.map(msg => (
+                    {filteredMessages.map(msg => (
                         <tr key={msg.id} className={`border-b hover:bg-gray-50 cursor-pointer ${!msg.isRead ? 'bg-pink-50 font-semibold' : 'bg-white'}`} onClick={() => setSelectedMessage(msg)}>
                             <td className="px-6 py-4">
                                 {!msg.isRead && <span className="inline-block w-2.5 h-2.5 bg-pink-500 rounded-full"></span>}
@@ -119,11 +113,7 @@ const AdminMessagesPage: React.FC = () => {
                             <td className="px-6 py-4 max-w-sm truncate">{msg.message}</td>
                             <td className="px-6 py-4">{msg.date}</td>
                         </tr>
-                    )) : (
-                        <tr>
-                            <td colSpan={4} className="px-6 py-10 text-center text-gray-500">No messages found.</td>
-                        </tr>
-                    )}
+                    ))}
                 </tbody>
             </table>
         </div>
