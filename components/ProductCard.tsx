@@ -1,5 +1,4 @@
 
-
 import React, { useState, memo } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Product } from '../types';
