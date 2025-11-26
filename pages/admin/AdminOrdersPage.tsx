@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
 import { Search, X, Trash2, RefreshCw } from 'lucide-react';
@@ -101,6 +100,10 @@ const AdminOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
 
   useEffect(() => {
     // This effect syncs the selected order with the main orders list.
@@ -118,6 +121,11 @@ const AdminOrdersPage: React.FC = () => {
       }
     }
   }, [orders, selectedOrder]);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleRefresh = async () => {
       setIsRefreshing(true);
@@ -137,6 +145,13 @@ const AdminOrdersPage: React.FC = () => {
         return b.id.localeCompare(a.id);
     });
   }, [orders, searchTerm]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = filteredOrders.slice(
+      (currentPage - 1) * ITEMS_PER_PAGE,
+      currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div>
@@ -176,7 +191,7 @@ const AdminOrdersPage: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredOrders.map(order => (
+                    {paginatedOrders.map(order => (
                         <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                             <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                             <td className="px-6 py-4">
@@ -192,9 +207,41 @@ const AdminOrdersPage: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {paginatedOrders.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="text-center py-8 text-gray-500">
+                                No orders found.
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 text-sm">
+                <span className="text-gray-600">Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length} orders</span>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        Previous
+                    </button>
+                    <span className="font-medium text-gray-700">Page {currentPage} of {totalPages}</span>
+                    <button 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+        )}
+
         {selectedOrder && <OrderDetailsModal 
             order={selectedOrder} 
             onClose={() => setSelectedOrder(null)} 
