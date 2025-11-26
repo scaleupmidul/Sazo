@@ -46,34 +46,36 @@ const ProductDetailsPageSkeleton: React.FC = () => (
 );
 
 const ProductDetailsPage: React.FC = () => {
-  const { product, settings, navigate, addToCart, notify, loading, fetchProductDetails } = useAppStore(state => ({
+  const { product, settings, navigate, addToCart, notify, loading } = useAppStore(state => ({
     product: state.selectedProduct,
     settings: state.settings,
     navigate: state.navigate,
     addToCart: state.addToCart,
     notify: state.notify,
-    loading: state.loading,
-    fetchProductDetails: state.fetchProductDetails
+    loading: state.loading
   }));
 
-  const [selectedImage, setSelectedImage] = useState(product?.images[0]);
+  // Use safe accessors for properties that might be missing
+  const images = product?.images || [];
+  const sizes = product?.sizes || [];
+  const displayColors = product?.colors || [];
+
+  const [selectedImage, setSelectedImage] = useState(images[0] || '');
   const [quantity, setQuantity] = useState(1);
-  const isFreeSizeOnly = product?.sizes.length === 1 && product.sizes[0] === 'Free';
+  
+  const isFreeSizeOnly = sizes.length === 1 && sizes[0] === 'Free';
   const [selectedSize, setSelectedSize] = useState<string | null>(isFreeSizeOnly ? 'Free' : null);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
-  // Ensure we have the full details (all images) when mounting
-  useEffect(() => {
-    if (product?.id) {
-        // This fetches the full data including all images from the backend
-        fetchProductDetails(product.id);
-    }
-  }, [product?.id]);
-
   useEffect(() => {
     if (product) {
-        setSelectedImage(product.images[0]);
-        const isFreeSize = product.sizes.length === 1 && product.sizes[0] === 'Free';
+        const productImages = product.images || [];
+        if (productImages.length > 0) {
+            setSelectedImage(productImages[0]);
+        }
+        
+        const productSizes = product.sizes || [];
+        const isFreeSize = productSizes.length === 1 && productSizes[0] === 'Free';
         setSelectedSize(isFreeSize ? 'Free' : null);
 
         // Push view_item event to dataLayer
@@ -128,10 +130,10 @@ const ProductDetailsPage: React.FC = () => {
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 bg-white p-4 sm:p-8 rounded-xl shadow-lg border border-stone-200">
         <div className="space-y-4">
           <div className="aspect-[3.5/4] overflow-hidden rounded-xl">
-            <img src={selectedImage} alt={product.name} className="w-full h-full object-cover" />
+            {selectedImage && <img src={selectedImage} alt={product.name} className="w-full h-full object-cover" />}
           </div>
           <div className="flex space-x-3 overflow-x-auto p-1">
-            {product.images.map((img, index) => (
+            {images.map((img, index) => (
               <img
                 key={index}
                 src={img}
@@ -161,7 +163,7 @@ const ProductDetailsPage: React.FC = () => {
                 )}
             </div>
             <div className="flex flex-wrap gap-3">
-              {product.sizes.map(size => (
+              {sizes.map(size => (
                 <button
                   key={size}
                   onClick={() => !isFreeSizeOnly && setSelectedSize(size)}
@@ -177,7 +179,7 @@ const ProductDetailsPage: React.FC = () => {
 
           <div className="space-y-3 py-4 text-sm text-stone-800">
             <p><strong>Fabric:</strong> {product.fabric}</p>
-            <p><strong>Colors Available:</strong> {product.colors.join(', ')}</p>
+            <p><strong>Colors Available:</strong> {displayColors.join(', ')}</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
