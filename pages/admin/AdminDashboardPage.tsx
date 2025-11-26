@@ -27,16 +27,19 @@ const StatCard: React.FC<{ title: string, value: string, icon: React.ElementType
 );
 
 const AdminDashboardPage: React.FC = () => {
-    const { products, orders, navigate } = useAppStore();
+    const { products, orders, navigate, dashboardStats } = useAppStore();
     
-    // Calculate revenue: Sum total of all orders EXCEPT those that are Cancelled
-    const totalRevenue = orders
-        .filter(order => order.status !== 'Cancelled')
-        .reduce((sum, order) => sum + order.total, 0);
+    // Use server-side stats if available for 100% accuracy across all records
+    // Fallback to 0 if loading or not set
+    const totalRevenue = dashboardStats?.totalRevenue ?? 0;
+    const totalOrdersCount = dashboardStats?.totalOrders ?? 0;
+    const totalProductsCount = dashboardStats?.totalProducts ?? 0;
+    const onlineTransactionsCount = dashboardStats?.onlineTransactions ?? 0;
 
+    // Recent orders still use the loaded orders array, which is fine for "Recent" lists
+    // We sort by date descending to get the newest ones
     const recentOrders = [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
     
-    const onlineTransactionsCount = orders.filter(o => o.paymentMethod === 'Online').length;
     const recentPaymentRecords = orders
         .filter(o => o.paymentMethod === 'Online' && o.paymentDetails)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -47,10 +50,10 @@ const AdminDashboardPage: React.FC = () => {
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Total Products" value={products.length.toString()} icon={ShoppingBag} />
-                <StatCard title="Total Orders" value={orders.length.toString()} icon={ListOrdered} />
+                <StatCard title="Total Products" value={totalProductsCount.toLocaleString()} icon={ShoppingBag} />
+                <StatCard title="Total Orders" value={totalOrdersCount.toLocaleString()} icon={ListOrdered} />
                 <StatCard title="Total Revenue" value={`৳${totalRevenue.toLocaleString('en-IN')}`} icon={DollarSign} />
-                <StatCard title="Online Transactions" value={onlineTransactionsCount.toString()} icon={CreditCard} />
+                <StatCard title="Online Transactions" value={onlineTransactionsCount.toLocaleString()} icon={CreditCard} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
