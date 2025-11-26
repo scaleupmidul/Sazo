@@ -11,17 +11,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'zustand'],
-          icons: ['lucide-react'],
-          // Split admin pages into a separate chunk so customers don't download admin code
-          admin: [
-            './pages/admin/AdminDashboardPage',
-            './pages/admin/AdminProductsPage', 
-            './pages/admin/AdminOrdersPage',
-            './pages/admin/AdminSettingsPage',
-            './pages/admin/AdminMessagesPage',
-            './pages/admin/AdminPaymentInfoPage'
-          ]
+          // Keep core dependencies in vendor, but pages will now be auto-split by React.lazy
+          vendor: ['react', 'react-dom', 'zustand', 'lucide-react'],
         },
       },
     },
