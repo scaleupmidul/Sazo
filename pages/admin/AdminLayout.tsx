@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { LayoutDashboard, ShoppingBag, ListOrdered, LogOut, Menu, X, MessageSquare, Settings, CreditCard } from 'lucide-react';
 import { useAppStore } from '../../store';
@@ -27,7 +26,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // FIX: Ensure contactMessages is an array before filtering
-  const unreadMessagesCount = (contactMessages || []).filter(msg => !msg.isRead).length;
+  const unreadMessagesCount = Array.isArray(contactMessages) ? contactMessages.filter(msg => !msg.isRead).length : 0;
 
   const handleNav = (path: string) => {
     navigate(path);
