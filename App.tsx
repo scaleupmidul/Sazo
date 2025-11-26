@@ -44,11 +44,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
-        const productId = productMatch[1];
+        // Sanitize ID: Remove any query parameters (e.g., ?fbclid=...)
+        const productId = productMatch[1].split('?')[0];
+        
         // FIX: This guard prevents an infinite re-render loop.
-        // It checks if the currently selected product already matches the one in the URL.
-        // This is crucial because the `products` array is a new instance on each fetch,
-        // which would otherwise cause this effect to re-run and re-set the state continuously.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -111,7 +110,6 @@ const App: React.FC = () => {
   const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
-     // This function returns the component for a the current admin path, to be rendered inside AdminLayout.
      if (path === '/admin/dashboard') return <AdminDashboardPage />;
      if (path === '/admin/products') return <AdminProductsPage />;
      if (path === '/admin/orders') return <AdminOrdersPage />;
@@ -119,17 +117,14 @@ const App: React.FC = () => {
      if (path === '/admin/settings') return <AdminSettingsPage />;
      if (path === '/admin/payment-info' || path === '/admin/transactions') return <AdminPaymentInfoPage />;
      
-     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
-    // Standalone admin login page (no layout)
     if (path === '/admin/login') {
       return <AdminLoginPage />;
     }
 
-    // All other admin pages are wrapped in the layout
     if (path.startsWith('/admin')) {
       return (
         <AdminLayout>
@@ -138,7 +133,6 @@ const App: React.FC = () => {
       );
     }
     
-    // Customer-facing pages
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
       return <ProductDetailsPage />;
@@ -164,7 +158,6 @@ const App: React.FC = () => {
       case '/policy':
         return <PolicyPage />;
       default:
-        // For any other path, show the home page. A 404 page could be added here.
         return <HomePage />;
     }
   };
@@ -231,7 +224,6 @@ const App: React.FC = () => {
           }
           .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
 
-          /* New Animations for Hero Slider */
           @keyframes fadeInUp {
               from { opacity: 0; transform: translateY(20px); }
               to { opacity: 1; transform: translateY(0); }
@@ -241,7 +233,6 @@ const App: React.FC = () => {
           .text-shadow { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
           .text-shadow-md { text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
-          /* WhatsApp Pulse Animation */
           @keyframes pulse-whatsapp {
             0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(219, 39, 119, 0); }
