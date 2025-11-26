@@ -2,30 +2,45 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { Order } from '../../types';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, RefreshCw } from 'lucide-react';
 
 const AdminPaymentInfoPage: React.FC = () => {
     const { orders, deleteOrder, refreshAdminData } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Ensure fresh data is loaded when accessing this page
     useEffect(() => {
-        refreshAdminData();
+        const loadData = async () => {
+            setIsRefreshing(true);
+            await refreshAdminData();
+            setIsRefreshing(false);
+        };
+        loadData();
     }, [refreshAdminData]);
 
+    const handleManualRefresh = async () => {
+        setIsRefreshing(true);
+        await refreshAdminData();
+        setIsRefreshing(false);
+    };
+
     const paymentRecords = useMemo(() => {
-        return orders
+        const safeOrders = Array.isArray(orders) ? orders : [];
+        return safeOrders
             .filter(order => order.paymentMethod === 'Online' && order.paymentDetails)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [orders]);
 
     const filteredRecords = useMemo(() => {
         if (!searchTerm) return paymentRecords;
+        const lowerSearch = searchTerm.toLowerCase();
+        
         return paymentRecords.filter(order =>
-            order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (order.orderId || order.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.paymentDetails?.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.paymentDetails?.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+            (order.customerName || '').toLowerCase().includes(lowerSearch) ||
+            (order.orderId || order.id || '').toLowerCase().includes(lowerSearch) ||
+            (order.paymentDetails?.transactionId || '').toLowerCase().includes(lowerSearch) ||
+            (order.paymentDetails?.paymentNumber || '').toLowerCase().includes(lowerSearch)
         );
     }, [paymentRecords, searchTerm]);
 
@@ -38,7 +53,16 @@ const AdminPaymentInfoPage: React.FC = () => {
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-3xl font-bold text-gray-800">Online Payment Records</h1>
+                <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-bold text-gray-800">Online Payment Records</h1>
+                    <button 
+                        onClick={handleManualRefresh}
+                        className={`p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50 text-pink-600 transition ${isRefreshing ? 'animate-spin' : ''}`}
+                        title="Refresh Records"
+                    >
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                </div>
                 <div className="relative w-full md:w-64">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <input 
@@ -95,7 +119,9 @@ const AdminPaymentInfoPage: React.FC = () => {
                             );
                         }) : (
                            <tr>
-                                <td colSpan={8} className="text-center py-10 text-gray-500">No online payment records found.</td>
+                                <td colSpan={8} className="text-center py-10 text-gray-500">
+                                    {isRefreshing ? 'Loading records...' : 'No online payment records found.'}
+                                </td>
                            </tr>
                         )}
                     </tbody>
