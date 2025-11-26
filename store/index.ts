@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -92,7 +93,12 @@ export const useAppStore = create<AppState>()(
                 if (ordersRes.ok && messagesRes.ok) {
                     const ordersData = await ordersRes.json();
                     const messagesData = await messagesRes.json();
-                    set({ orders: ordersData, contactMessages: messagesData });
+                    
+                    // FIX: Validate data is array before setting, otherwise default to empty array
+                    set({ 
+                        orders: Array.isArray(ordersData) ? ordersData : [], 
+                        contactMessages: Array.isArray(messagesData) ? messagesData : [] 
+                    });
                 }
             } catch (error) {
                 console.error("Failed to load admin data", error);
@@ -312,6 +318,12 @@ export const useAppStore = create<AppState>()(
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(productData),
             });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to add product");
+            }
+
             const newProduct = await res.json();
             set(state => ({ products: [newProduct, ...state.products] }));
             get().notify('Product added successfully!', 'success');
@@ -324,6 +336,12 @@ export const useAppStore = create<AppState>()(
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(updatedProduct),
             });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to update product");
+            }
+
             const savedProduct = await res.json();
             set(state => ({
                 products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p)
