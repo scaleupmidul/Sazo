@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAppStore } from '../store';
 
@@ -8,7 +9,10 @@ const HeroSlider: React.FC = () => {
     
     const [currentSlide, setCurrentSlide] = useState(0);
     const [loadedSlides, setLoadedSlides] = useState<Record<number, boolean>>({});
-    const totalSlides = sliderImages.length;
+    
+    // Safety check to ensure we have an array
+    const slides = Array.isArray(sliderImages) ? sliderImages : [];
+    const totalSlides = slides.length;
 
     const nextSlide = useCallback(() => {
         if (totalSlides > 0) {
@@ -29,7 +33,9 @@ const HeroSlider: React.FC = () => {
         setLoadedSlides(prev => ({...prev, [index]: true}));
     }
 
-    if (loading || totalSlides === 0) {
+    // Optimization: Only show skeleton if we have NO slides AND we are loading.
+    // If we have slides (cached), show them immediately even if background refresh is happening.
+    if (totalSlides === 0 && loading) {
         return (
             <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse">
                 <div className="absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16">
@@ -42,14 +48,16 @@ const HeroSlider: React.FC = () => {
             </section>
         );
     }
+    
+    if (totalSlides === 0) return null;
 
-    const activeSlide = sliderImages[currentSlide];
+    const activeSlide = slides[currentSlide];
     const isCurrentSlideImageLoaded = loadedSlides[currentSlide] || false;
 
     return (
         <section className="relative w-full h-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200">
             <div className="w-full h-full relative overflow-hidden">
-                {sliderImages.map((slide, index) => (
+                {slides.map((slide, index) => (
                     <div
                         key={slide.id}
                         className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0'}`}
@@ -93,7 +101,7 @@ const HeroSlider: React.FC = () => {
             </div>
             
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-                {sliderImages.map((_, index) => (
+                {slides.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => goToSlide(index)}
