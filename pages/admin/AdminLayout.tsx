@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, ShoppingBag, ListOrdered, LogOut, Menu, X, MessageSquare, Settings, CreditCard } from 'lucide-react';
 import { useAppStore } from '../../store';
 
@@ -22,8 +23,13 @@ const NavLink: React.FC<{ icon: React.ElementType, label: string, onClick: () =>
 );
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const { navigate, logout, contactMessages } = useAppStore();
+  const { navigate, logout, contactMessages, loadAdminData } = useAppStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Ensure admin data is loaded whenever the admin layout is accessed
+  useEffect(() => {
+      loadAdminData();
+  }, [loadAdminData]);
 
   // FIX: Ensure contactMessages is an array before filtering
   const unreadMessagesCount = Array.isArray(contactMessages) ? contactMessages.filter(msg => !msg.isRead).length : 0;
