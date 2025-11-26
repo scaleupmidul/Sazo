@@ -82,7 +82,7 @@ const AdminDashboardPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Total Products" value={adminProductsPagination.total.toString()} icon={ShoppingBag} />
+                <StatCard title="Total Products" value={(adminProductsPagination?.total || 0).toString()} icon={ShoppingBag} />
                 <StatCard title="Total Orders" value={orders.length.toString()} icon={ListOrdered} />
                 <StatCard title="Total Revenue" value={`৳${totalRevenue.toLocaleString('en-IN')}`} icon={DollarSign} />
                 <StatCard title="Online Transactions" value={onlineTransactionsCount.toString()} icon={CreditCard} />
