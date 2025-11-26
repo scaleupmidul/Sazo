@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
 // @access  Public
 router.post('/', async (req, res) => {
   try {
-    const { customerDetails, cartItems, total, paymentInfo } = req.body;
+    const { customerDetails, cartItems, total, paymentInfo, shippingCharge } = req.body;
     
     if (!cartItems || cartItems.length === 0) {
         return res.status(400).json({ message: 'Cart is empty' });
@@ -104,6 +104,7 @@ router.post('/', async (req, res) => {
         city: customerDetails?.city || '', // Default to empty string if missing
         cartItems: cartItems,
         total: total,
+        shippingCharge: shippingCharge, // Save specific shipping charge
         paymentMethod: paymentInfo?.paymentMethod,
         paymentDetails: paymentInfo?.paymentDetails,
         date: new Date().toISOString().split('T')[0],
