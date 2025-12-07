@@ -165,6 +165,7 @@ export interface AppState {
   cartTotal: number;
   selectedProduct: Product | null;
   setSelectedProduct: (product: Product | null) => void;
+  refreshProduct: (id: string) => Promise<void>; // Added: Fetch fresh product data
   notification: Notification | null;
   notify: (message: string, type?: 'success' | 'error' | 'info') => void;
   orders: Order[];
