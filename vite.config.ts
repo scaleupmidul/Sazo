@@ -1,3 +1,4 @@
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -10,12 +11,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor': ['react', 'react-dom', 'zustand'],
-          'ui': ['lucide-react'],
+          'react-core': ['react', 'react-dom'],
+          'app-state': ['zustand'],
+          'ui-icons': ['lucide-react'], 
           'utils': ['bcryptjs'],
         },
       },
     },
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 600,
   },
 });
