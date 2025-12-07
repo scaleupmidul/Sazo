@@ -1,3 +1,4 @@
+
 import express from 'express';
 import Product from '../models/Product.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -19,22 +20,13 @@ router.get('/admin', protect, async (req, res) => {
         } : {};
 
         const count = await Product.countDocuments({ ...searchTerm });
-        // Admin needs Mongoose docs for editing methods sometimes, but usually lean is fine.
-        // Keeping it standard here for safety, but admin panel speed is less critical than user speed.
         const products = await Product.find({ ...searchTerm })
             .sort({ createdAt: -1 })
             .limit(pageSize)
-            .skip(pageSize * (page - 1))
-            .lean();
-            
-        // Map _id to id for admin table
-        const formattedProducts = products.map(p => ({
-            ...p,
-            id: p._id.toString()
-        }));
+            .skip(pageSize * (page - 1));
 
         res.json({
-            products: formattedProducts,
+            products,
             page,
             pages: Math.ceil(count / pageSize),
             total: count
@@ -46,27 +38,13 @@ router.get('/admin', protect, async (req, res) => {
 });
 
 
-// @desc    Fetch all products (Optimized for Shop Page)
+// @desc    Fetch all products
 // @route   GET /api/products
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    // OPTIMIZATION: 
-    // 1. Only fetch the first image for the shop list.
-    // 2. Use .lean() for high-performance read.
-    const products = await Product.find({}, { images: { $slice: 1 } })
-      .sort({ createdAt: -1 })
-      .lean();
-    
-    // Fix: Manually map _id to id
-    const formattedProducts = products.map(p => ({
-        ...p,
-        id: p._id.toString(),
-        _id: undefined,
-        __v: undefined
-    }));
-      
-    res.json(formattedProducts);
+    const products = await Product.find({}).sort({ createdAt: -1 });
+    res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -77,14 +55,8 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
-    // For single product, lean() helps too
-    const product = await Product.findById(req.params.id).lean();
+    const product = await Product.findById(req.params.id);
     if (product) {
-      // lean() returns _id object, frontend expects id string usually handled by toJSON transform
-      // We manually fix it for lean queries or rely on frontend to handle _id
-      product.id = product._id.toString();
-      delete product._id;
-      delete product.__v;
       res.json(product);
     } else {
       res.status(404).json({ message: 'Product not found' });
