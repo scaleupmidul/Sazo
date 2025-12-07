@@ -1,3 +1,4 @@
+// components/HeroSlider.tsx
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAppStore } from '../store';
@@ -9,13 +10,15 @@ const HeroSlider: React.FC = () => {
     
     const [currentSlide, setCurrentSlide] = useState(0);
     const [loadedSlides, setLoadedSlides] = useState<Record<number, boolean>>({});
+    // Track if we have done the first render interaction
+    const [hasInteracted, setHasInteracted] = useState(false);
     
-    // Safety check to ensure we have an array
     const slides = Array.isArray(sliderImages) ? sliderImages : [];
     const totalSlides = slides.length;
 
     const nextSlide = useCallback(() => {
         if (totalSlides > 0) {
+            setHasInteracted(true);
             setCurrentSlide(prev => (prev + 1) % totalSlides);
         }
     }, [totalSlides]);
@@ -26,6 +29,7 @@ const HeroSlider: React.FC = () => {
     }, [nextSlide]);
 
     const goToSlide = (index: number) => {
+        setHasInteracted(true);
         setCurrentSlide(index);
     };
     
@@ -33,8 +37,6 @@ const HeroSlider: React.FC = () => {
         setLoadedSlides(prev => ({...prev, [index]: true}));
     }
 
-    // Optimization: Only show skeleton if we have NO slides AND we are loading.
-    // If we have slides (cached), show them immediately even if background refresh is happening.
     if (totalSlides === 0 && loading) {
         return (
             <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse">
@@ -54,35 +56,58 @@ const HeroSlider: React.FC = () => {
     const activeSlide = slides[currentSlide];
     const isCurrentSlideImageLoaded = loadedSlides[currentSlide] || false;
 
+    // Optimization: If it's the very first render of the first slide, show text INSTANTLY (no animation).
+    const shouldAnimateText = hasInteracted || currentSlide !== 0;
+
     return (
         <section className="relative w-full h-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200">
             <div className="w-full h-full relative overflow-hidden">
-                {slides.map((slide, index) => (
-                    <div
-                        key={slide.id}
-                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0'}`}
-                    >
-                        <picture className="w-full h-full">
-                            {slide.mobileImage && <source media="(max-width: 640px)" srcSet={slide.mobileImage} />}
-                            <img
-                                src={slide.image}
-                                alt={slide.title}
-                                className="object-cover w-full h-full"
-                                onLoad={() => handleImageLoad(index)}
-                                // Optimization: First image loads eagerly with high priority for LCP on Mobile
-                                loading={index === 0 ? "eager" : "lazy"}
-                                fetchPriority={index === 0 ? "high" : "auto"}
-                                decoding="async"
-                                style={{ opacity: loadedSlides[index] ? 1 : 0, transition: 'opacity 0.5s' }}
-                            />
-                        </picture>
-                        <div className={`absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent transition-opacity duration-300 ${loadedSlides[index] ? 'opacity-100' : 'opacity-0'}`}></div>
-                    </div>
-                ))}
+                {slides.map((slide, index) => {
+                    const isFirstSlide = index === 0;
+                    const isLoaded = loadedSlides[index];
+                    
+                    const imageOpacity = isFirstSlide ? 1 : (isLoaded ? 1 : 0);
+                    const transitionStyle = isFirstSlide ? 'none' : 'opacity 0.5s';
+
+                    return (
+                        <div
+                            key={slide.id}
+                            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0'}`}
+                        >
+                            {/* Improved Picture Tag for LCP */}
+                            <picture className="w-full h-full block">
+                                {/* Mobile Source First */}
+                                {slide.mobileImage && (
+                                    <source 
+                                        media="(max-width: 640px)" 
+                                        srcSet={slide.mobileImage} 
+                                        sizes="100vw"
+                                    />
+                                )}
+                                <img
+                                    src={slide.image}
+                                    alt={slide.title}
+                                    className="object-cover w-full h-full block"
+                                    onLoad={() => handleImageLoad(index)}
+                                    // CRITICAL: First slide gets high priority, eager load, and sync decoding
+                                    loading={isFirstSlide ? "eager" : "lazy"}
+                                    // @ts-ignore
+                                    fetchPriority={isFirstSlide ? "high" : "auto"}
+                                    decoding={isFirstSlide ? "sync" : "async"}
+                                    style={{ opacity: imageOpacity, transition: transitionStyle }}
+                                />
+                            </picture>
+                            <div className={`absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent transition-opacity duration-300 ${isFirstSlide || isLoaded ? 'opacity-100' : 'opacity-0'}`}></div>
+                        </div>
+                    );
+                })}
             </div>
             
-            <div className={`absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16 z-20 transition-opacity duration-700 ${isCurrentSlideImageLoaded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <div key={currentSlide} className="max-w-md space-y-3 sm:space-y-4 text-white animate-fadeInUp">
+            <div className={`absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16 z-20 transition-opacity duration-700 ${currentSlide === 0 || isCurrentSlideImageLoaded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div 
+                    key={currentSlide} 
+                    className={`max-w-md space-y-3 sm:space-y-4 text-white ${shouldAnimateText ? 'animate-fadeInUp' : ''}`}
+                >
                     <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight text-shadow ${activeSlide.color}`}>
                         {activeSlide.title}
                     </h2>
