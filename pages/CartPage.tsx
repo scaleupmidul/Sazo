@@ -1,65 +1,70 @@
-// pages/CartPage.tsx
 
 import React, { useEffect } from 'react';
 import { CartItem } from '../types';
 import { ShoppingCart, Truck, X, ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useAppStore } from '../store';
 
+// Helper to generate SKU for DataLayer
+const generateSKU = (name: string, size: string): string => {
+    const namePart = name.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, ''); 
+    const sizePart = size === 'Free' ? 'FREE' : size.toUpperCase();
+    return `SAZO-${namePart}-${sizePart}`;
+};
+
 const CartItemComponent: React.FC<{ item: CartItem, updateCartQuantity: (id: string, size: string, newQuantity: number) => void }> = ({ item, updateCartQuantity }) => (
   <div className="
-    group flex gap-4 
-    bg-white p-4 rounded-xl shadow-sm border border-stone-100
+    group flex gap-3 sm:gap-4 
+    bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-stone-100
     lg:bg-transparent lg:p-0 lg:rounded-none lg:shadow-none lg:border-0 lg:border-b lg:border-stone-100 lg:py-6 lg:first:pt-0 lg:last:border-0
     transition-all duration-300 hover:shadow-md lg:hover:shadow-none lg:hover:bg-stone-50/30
   ">
     
-    {/* Image Section */}
-    <div className="w-24 sm:w-28 lg:w-32 aspect-[3/4] flex-shrink-0 overflow-hidden rounded-lg border border-stone-100 bg-stone-50 shadow-sm">
-      <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+    {/* Image Section - Slightly smaller on mobile to give text more room, keeping aspect ratio */}
+    <div className="w-20 sm:w-24 lg:w-28 aspect-[3/4] flex-shrink-0 overflow-hidden rounded-lg border border-stone-100 bg-stone-50">
+      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
     </div>
 
     {/* Details Section */}
     <div className="flex flex-col flex-1 justify-between min-w-0">
       
       {/* Top: Name & Remove */}
-      <div className="flex justify-between items-start gap-3">
-        <div className="min-w-0 space-y-1.5">
-          <h3 className="text-base sm:text-lg font-bold text-stone-800 line-clamp-2 leading-snug">{item.name}</h3>
-          <p className="text-xs sm:text-sm text-stone-500 font-medium inline-flex items-center bg-stone-50 px-2 py-1 rounded border border-stone-100">
-            Size: <span className="text-stone-900 ml-1 font-bold">{item.size === 'Free' ? 'Free Size' : item.size}</span>
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0 space-y-1">
+          <h3 className="text-sm sm:text-base font-bold text-stone-800 line-clamp-2 leading-snug">{item.name}</h3>
+          <p className="text-[10px] sm:text-xs text-stone-500 font-medium inline-flex items-center bg-stone-50 px-1.5 py-0.5 rounded border border-stone-100">
+            Size: <span className="text-stone-900 ml-1">{item.size === 'Free' ? 'Free Size' : item.size}</span>
           </p>
         </div>
-        {/* Remove Button */}
+        {/* Remove Button - Static flex item to prevent overlap */}
         <button 
           onClick={() => updateCartQuantity(item.id, item.size, 0)} 
-          className="text-stone-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 flex-shrink-0 -mr-2 -mt-2 bg-stone-50 sm:bg-transparent"
+          className="text-stone-400 hover:text-red-500 transition-colors p-1.5 sm:p-2 rounded-full hover:bg-red-50 flex-shrink-0 -mr-1.5 -mt-1.5 sm:-mr-2 sm:-mt-2"
           aria-label="Remove item"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 
-      {/* Bottom: Price & Quantity - Added gap-3 and shrink control to prevent overlap */}
-      <div className="flex items-end justify-between mt-4 pt-3 border-t border-dashed border-stone-100 lg:border-none lg:pt-0 lg:mt-2 gap-3">
-        <div className="flex flex-col min-w-0">
-            <span className="text-xs text-stone-400 font-bold uppercase tracking-wider mb-0.5">Total</span>
-            <span className="text-xl font-extrabold text-pink-600 leading-none whitespace-nowrap">৳{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+      {/* Bottom: Price & Quantity (Separated by border on mobile) */}
+      <div className="flex items-end justify-between mt-2 pt-2 border-t border-dashed border-stone-100 lg:border-none lg:pt-0 lg:mt-2">
+        <div className="flex flex-col">
+            <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mb-0.5">Total</span>
+            <span className="text-base sm:text-lg font-extrabold text-pink-600 leading-none">৳{(item.price * item.quantity).toLocaleString('en-IN')}</span>
         </div>
 
-        {/* Quantity Controller - Slightly more compact on mobile (w-9) to allow space for price */}
-        <div className="flex items-center bg-white border border-stone-200 rounded-lg h-9 sm:h-10 shadow-sm flex-shrink-0">
+        <div className="flex items-center bg-white border border-stone-200 rounded-lg h-8 sm:h-9 shadow-sm">
           <button 
             onClick={() => updateCartQuantity(item.id, item.size, item.quantity - 1)} 
-            className="w-9 sm:w-10 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-l-lg transition border-r border-stone-100 hover:bg-pink-50"
+            className="w-8 sm:w-9 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-l-lg transition border-r border-stone-100"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
-          <span className="w-9 sm:w-10 text-center font-bold text-base text-stone-800 select-none">{item.quantity}</span>
+          <span className="w-8 sm:w-9 text-center font-bold text-sm text-stone-800 select-none">{item.quantity}</span>
           <button 
             onClick={() => updateCartQuantity(item.id, item.size, item.quantity + 1)} 
-            className="w-9 sm:w-10 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-r-lg transition border-l border-stone-100 hover:bg-pink-50"
+            className="w-8 sm:w-9 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-r-lg transition border-l border-stone-100"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>
@@ -86,7 +91,7 @@ const CartPage: React.FC = () => {
                 currency: 'BDT',
                 value: cartTotal,
                 items: cart.map(item => ({
-                    item_id: item.id,
+                    item_id: generateSKU(item.name, item.size), // Use SKU
                     item_name: item.name,
                     price: item.price,
                     quantity: item.quantity,
@@ -113,20 +118,20 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    <main className="max-w-screen-2xl mx-auto px-2 sm:px-6 lg:px-8 pt-4 sm:pt-12 pb-12">
-      <h2 className="text-2xl sm:text-4xl font-bold text-stone-900 mb-5 sm:mb-8 text-center">Your Shopping Cart</h2>
+    <main className="max-w-screen-2xl mx-auto px-1 sm:px-6 lg:px-8 pt-3 sm:pt-12 pb-12">
+      <h2 className="text-2xl sm:text-4xl font-bold text-stone-900 mb-4 sm:mb-8 text-center">Your Shopping Cart</h2>
       
       <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
         {/* Cart Items Column */}
         <div className="lg:col-span-8 mb-6 lg:mb-0">
            {/* Mobile: Space between cards. Desktop: White container with dividers */}
-           <div className="space-y-4 lg:space-y-0 lg:bg-white lg:p-6 lg:rounded-xl lg:shadow-lg lg:border lg:border-stone-200">
+           <div className="space-y-3 lg:space-y-0 lg:bg-white lg:p-6 lg:rounded-xl lg:shadow-lg lg:border lg:border-stone-200">
               {cart.map(item => <CartItemComponent key={`${item.id}-${item.size}`} item={item} updateCartQuantity={updateCartQuantity} />)}
            </div>
         </div>
 
         {/* Summary Column */}
-        <div className="lg:col-span-4 bg-white p-5 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit">
+        <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit">
           <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
           
           {/* Detailed Items List in Summary - Hidden on mobile, shown on desktop for reference */}
