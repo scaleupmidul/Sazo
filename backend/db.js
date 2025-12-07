@@ -23,11 +23,9 @@ const connectDB = async () => {
     }
 
     // OPTIMIZATION for Serverless (Vercel):
-    // 1. bufferCommands: false -> Fail immediately if DB not connected, don't wait.
-    // 2. maxPoolSize: 10 -> Reduce pool size. Serverless functions run in isolation, 
-    //    so huge pools (default 100) exhaust DB limits and slow down initial connection.
+    // removed bufferCommands: false to prevent immediate errors during cold starts
+    // maxPoolSize: 10 -> Reduced pool size for serverless isolation.
     const opts = {
-      bufferCommands: false,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000, // Timeout faster if DB is unreachable
       socketTimeoutMS: 45000,
