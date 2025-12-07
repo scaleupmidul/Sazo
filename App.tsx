@@ -1,3 +1,4 @@
+
 // App.tsx
 
 import React, { useEffect, Suspense } from 'react';
@@ -50,12 +51,24 @@ const App: React.FC = () => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1].split('?')[0];
-        if (selectedProduct?.id === productId) {
-            return;
-        }
+        
+        // Find the latest version of the product from the store
         const product = products.find(p => p.id === productId);
-        setSelectedProduct(product || null);
+
+        // Update selectedProduct if:
+        // 1. We found a product AND it's different from the currently selected one (reference check)
+        // 2. Or if we haven't selected anything yet.
+        // This ensures that if images are updated in the background, the view refreshes.
+        if (product && selectedProduct !== product) {
+            setSelectedProduct(product);
+        } else if (!product && selectedProduct && selectedProduct.id !== productId) {
+             // If product isn't found in list (e.g. direct link before load), clear selection or keep waiting
+             // For now, we leave it to allow loadInitialData to populate it later
+        } else if (!product && !selectedProduct) {
+             // Potentially handle 404 here or wait for loading
+        }
     } else {
+        // Clear selected product when leaving product page
         if (selectedProduct !== null) {
             setSelectedProduct(null);
         }
