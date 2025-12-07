@@ -1,4 +1,3 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -11,10 +10,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-core': ['react', 'react-dom'],
-          'app-state': ['zustand'],
-          'ui-icons': ['lucide-react'], 
-          'utils': ['bcryptjs'],
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-utils': ['zustand', 'lucide-react', 'bcryptjs'],
         },
       },
     },
