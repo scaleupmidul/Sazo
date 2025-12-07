@@ -8,17 +8,19 @@ import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
 import PageLoader from './components/PageLoader';
 
-// Code Splitting: Pages are loaded only when visited
-const HomePage = React.lazy(() => import('./pages/HomePage'));
-const ShopPage = React.lazy(() => import('./pages/ShopPage'));
-const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
-const CartPage = React.lazy(() => import('./pages/CartPage'));
-const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+// CORE PAGES: Imported statically for instant navigation (No loading spinner)
+import HomePage from './pages/HomePage';
+import ShopPage from './pages/ShopPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+
+// SECONDARY PAGES: Lazy loaded to save initial bundle size
 const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
 const ThankYouPage = React.lazy(() => import('./pages/ThankYouPage'));
 
-// Admin Pages (Loaded only for admins)
+// ADMIN PAGES: Lazy loaded (only downloaded when accessing admin panel)
 const AdminLoginPage = React.lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -139,6 +141,8 @@ const App: React.FC = () => {
       );
     }
     
+    // For customer pages, we use Suspense only for the lazy-loaded ones (Contact, Policy, ThankYou).
+    // The main pages (Home, Shop, Product, Cart, Checkout) are now static and will render instantly without a loader.
     return (
         <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><PageLoader /></div>}>
             {(() => {
