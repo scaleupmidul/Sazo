@@ -88,12 +88,21 @@ app.get('/api/page-data/home', async (req, res) => {
 
         if (!settings) return res.status(404).json({ message: 'Settings not found' });
         
-        // Since we used lean(), settings is already a plain object, no need to call toObject()
-        // Just manually remove properties if they exist (though .select('-password') handled the password)
-        delete settings._id;
-        delete settings.__v;
+        // Fix: Manually map _id to id for .lean() queries to prevent frontend crashes
+        const formattedProducts = products.map(p => ({
+            ...p,
+            id: p._id.toString(),
+            _id: undefined,
+            __v: undefined
+        }));
+        
+        // Fix settings object
+        if (settings._id) {
+            delete settings._id;
+            delete settings.__v;
+        }
 
-        res.json({ settings: settings, products });
+        res.json({ settings: settings, products: formattedProducts });
     } catch (error) {
         console.error("Home data error:", error);
         res.status(500).json({ message: 'Server Error' });
