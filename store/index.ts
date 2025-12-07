@@ -1,4 +1,5 @@
 
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -234,6 +235,23 @@ export const useAppStore = create<AppState>()(
         setProducts: (products) => set({ products }),
 
         setSelectedProduct: (product) => set({ selectedProduct: product }),
+        
+        refreshProduct: async (id: string) => {
+            try {
+                const res = await fetch(`${API_URL}/products/${id}`);
+                if (!res.ok) return;
+                const freshProduct = await res.json();
+                
+                set(state => ({
+                    // Update in list if exists
+                    products: state.products.map(p => p.id === freshProduct.id ? freshProduct : p),
+                    // Update selected if matching (forces re-render of details page with fresh images)
+                    selectedProduct: state.selectedProduct?.id === freshProduct.id ? freshProduct : state.selectedProduct
+                }));
+            } catch (e) {
+                console.error("Failed to refresh product", e);
+            }
+        },
 
         notify: (message, type = 'success') => {
             set({ notification: { message, type } });
