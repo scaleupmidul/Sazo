@@ -22,12 +22,15 @@ const connectDB = async () => {
       throw new Error('MONGO_URI is not defined in environment variables.');
     }
 
-    // Optimized options for serverless/Vercel environment
+    // OPTIMIZATION for Serverless (Vercel):
+    // 1. bufferCommands: false -> Fail immediately if DB not connected, don't wait.
+    // 2. maxPoolSize: 10 -> Reduce pool size. Serverless functions run in isolation, 
+    //    so huge pools (default 100) exhaust DB limits and slow down initial connection.
     const opts = {
       bufferCommands: false,
-      maxPoolSize: 10, // Limit pool size for serverless
-      serverSelectionTimeoutMS: 5000, // Fail fast if DB is unreachable
-      socketTimeoutMS: 45000, // Close sockets after inactivity
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000, // Timeout faster if DB is unreachable
+      socketTimeoutMS: 45000,
     };
     
     cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
