@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Order } from '../../types';
 import { ShoppingBag, ListOrdered, DollarSign, CreditCard, RefreshCw } from 'lucide-react';
@@ -26,7 +27,7 @@ const StatCard: React.FC<{ title: string, value: string, icon: React.ElementType
 );
 
 const AdminDashboardPage: React.FC = () => {
-    const { products, orders, navigate, dashboardStats, loadInitialData } = useAppStore();
+    const { products, orders, navigate, dashboardStats, loadAdminData, notify } = useAppStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
     
     // Use server-side stats if available for 100% accuracy across all records
@@ -47,13 +48,14 @@ const AdminDashboardPage: React.FC = () => {
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await loadInitialData();
+        await loadAdminData();
         setIsRefreshing(false);
+        notify("Dashboard data updated.", "success");
     };
 
     return (
         <div>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-3 mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
                 <button 
                     onClick={handleRefresh} 
