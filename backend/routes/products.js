@@ -1,4 +1,3 @@
-
 import express from 'express';
 import Product from '../models/Product.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -38,12 +37,14 @@ router.get('/admin', protect, async (req, res) => {
 });
 
 
-// @desc    Fetch all products
+// @desc    Fetch all products (Optimized for Shop Page)
 // @route   GET /api/products
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find({}).sort({ createdAt: -1 });
+    // OPTIMIZATION: Only fetch the first image for the shop list.
+    // The details page (/:id) will fetch all images separately.
+    const products = await Product.find({}, { images: { $slice: 1 } }).sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -71,8 +72,20 @@ router.get('/:id', async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, async (req, res) => {
   try {
-    // The incoming product data from the form won't have an ID
-    const product = new Product(req.body);
+    // Generate a unique numeric productId (6 digits)
+    let productId;
+    let isUnique = false;
+    while (!isUnique) {
+        productId = Math.floor(100000 + Math.random() * 900000).toString();
+        const existing = await Product.findOne({ productId });
+        if (!existing) isUnique = true;
+    }
+
+    const product = new Product({
+        ...req.body,
+        productId
+    });
+    
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
@@ -88,7 +101,7 @@ router.put('/:id', protect, async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (product) {
       // Exclude the 'id' field from the request body if it exists
-      const { id, ...updateData } = req.body;
+      const { id, productId, ...updateData } = req.body;
       Object.assign(product, updateData);
       const updatedProduct = await product.save();
       res.json(updatedProduct);
