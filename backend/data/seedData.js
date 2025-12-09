@@ -1,3 +1,4 @@
+
 // Data copied from frontend constants.ts
 export const MOCK_PRODUCTS_DATA = [
   { id: 101, name: "Gulmohar Lawn Suit", category: "Cotton", price: 3500, description: "Pure cotton lawn three-piece with exquisite embroidery and soft dupatta. Ideal for daily wear.", fabric: "Lawn Cotton", colors: ["Pastel Pink", "Beige", "Mint"], sizes: ["S", "M", "L", "XL", "Free"], isNewArrival: true, isTrending: false, onSale: false, images: ["https://picsum.photos/seed/gulmohar/400/500", "https://picsum.photos/seed/gulmohar2/400/500", "https://picsum.photos/seed/gulmohar3/400/500"] },
@@ -30,7 +31,7 @@ const CATEGORY_IMAGE_URLS = {
 };
 
 export const DEFAULT_SETTINGS_DATA = {
-  onlinePaymentInfo: 'Payment Number: test\n<b>01909285883</b> (Personal)',
+  onlinePaymentInfo: 'অর্ডার কনফার্ম করতে ডেলিভারি চার্জ অগ্রিম প্রদান করুন —\n<b>01909285883 (Personal)</b>\nBkash / Nagad\nএবং নিচের তথ্যগুলো পূরণ করুন:',
   onlinePaymentInfoStyles: {
     fontSize: '0.875rem', // 14px, matching text-sm
   },
