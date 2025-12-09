@@ -1,10 +1,9 @@
-
-
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
 export interface Product {
   id: string;
+  productId?: string; // Added numeric ID for analytics (e.g., "987323")
   name: string;
   category: string;
   price: number;
@@ -23,6 +22,7 @@ export interface Product {
 
 export interface CartItem {
   id: string;
+  productId?: string; // Store numeric ID in cart for consistent tracking
   name:string;
   price: number;
   quantity: number;
