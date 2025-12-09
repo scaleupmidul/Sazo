@@ -1,8 +1,7 @@
-
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
+import { SLIDER_IMAGE_URLS, SLIDER_MOBILE_IMAGE_URLS, CATEGORY_IMAGE_URLS } from '../assets';
 
 const API_URL = '/api';
 
@@ -23,7 +22,18 @@ const DEFAULT_SETTINGS: AppSettings = {
     onlinePaymentInfo: '',
     onlinePaymentInfoStyles: { fontSize: '0.875rem' },
     codEnabled: true, onlinePaymentEnabled: true, onlinePaymentMethods: [],
-    sliderImages: [], categoryImages: [], categories: [], shippingOptions: [], productPagePromoImage: '',
+    sliderImages: [
+        { id: 1, title: "The Festive Silk Collection", subtitle: "Elegance and shimmer for every occasion. | New Silk Collection", color: "text-pink-600", image: SLIDER_IMAGE_URLS.silk, mobileImage: SLIDER_MOBILE_IMAGE_URLS.silk },
+        { id: 2, title: "Comfortable Lawn Arrivals", subtitle: "Breathe easy with our new cotton designs. | Comfortable Lawn Attire", color: "text-blue-600", image: SLIDER_IMAGE_URLS.lawn, mobileImage: SLIDER_MOBILE_IMAGE_URLS.lawn },
+        { id: 3, title: "Grand Party Wear", subtitle: "Unveil the ultimate glamour this season. | Grand Party Dress", color: "text-purple-600", image: SLIDER_IMAGE_URLS.party, mobileImage: SLIDER_MOBILE_IMAGE_URLS.party }
+    ], 
+    categoryImages: [
+        { categoryName: "Cotton", image: CATEGORY_IMAGE_URLS.cotton },
+        { categoryName: "Silk", image: CATEGORY_IMAGE_URLS.silk },
+        { categoryName: "Party Wear", image: CATEGORY_IMAGE_URLS.partyWear }
+    ], 
+    categories: ["Cotton", "Silk", "Party Wear"], 
+    shippingOptions: [], productPagePromoImage: '',
     contactAddress: '', contactPhone: '', contactEmail: '', whatsappNumber: '', showWhatsAppButton: false,
     showCityField: true,
     socialMediaLinks: [], privacyPolicy: '', adminEmail: '', adminPassword: '', footerDescription: '',
@@ -46,14 +56,14 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
         path: window.location.pathname,
-        products: [],
+        products: MOCK_PRODUCTS_DATA, // Start with products immediately for instant LCP
         orders: [],
         contactMessages: [],
-        settings: DEFAULT_SETTINGS,
+        settings: DEFAULT_SETTINGS, // Start with populated settings (including slider images)
         cart: [],
         selectedProduct: null,
         notification: null,
-        loading: true,
+        loading: false, // Start as not loading to skip skeletons. Components will re-render when fetch completes.
         isAdminAuthenticated: !!getTokenFromStorage(),
         cartTotal: 0,
         fullProductsLoaded: false,
@@ -592,6 +602,13 @@ export const useAppStore = create<AppState>()(
         const merged = { ...currentState, ...persistedState, cart: safeCart };
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
+        // Strategy: We start with MOCK_PRODUCTS_DATA in currentState for speed.
+        // If persistedState has products, use them (cache). 
+        // If persistedState.products is empty (e.g. from a cleared state), use MOCK again to ensure shell is populated.
+        if (!merged.products || merged.products.length === 0) {
+            merged.products = MOCK_PRODUCTS_DATA;
+        }
+
         return merged;
       },
     }
