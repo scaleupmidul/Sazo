@@ -47,7 +47,11 @@ const initializeDatabase = async () => {
         const productCount = await Product.countDocuments();
         if (productCount === 0) {
             console.log('No products found, seeding...');
-            const productsToSeed = MOCK_PRODUCTS_DATA.map(({ id, ...rest }) => rest);
+            // Map the simple integer IDs from seed data to the new string `productId` field
+            const productsToSeed = MOCK_PRODUCTS_DATA.map(({ id, ...rest }) => ({
+                ...rest,
+                productId: String(id) 
+            }));
             await Product.insertMany(productsToSeed);
         }
         
@@ -73,8 +77,9 @@ app.use('/api', dbConnectionMiddleware);
 
 app.get('/api/page-data/home', async (req, res) => {
     try {
-        // PERFORMANCE: Cache this response for 60 seconds to improve Speed Index and reduce DB load
-        res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+        // PERFORMANCE: Cache this response for 5 minutes (300s). 
+        // Dynamic data like new arrivals doesn't change every second.
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
 
         // PERFORMANCE: Use .lean() for faster reads
         const settings = await Settings.findOne().select('-adminPassword').lean();
