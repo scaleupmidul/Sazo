@@ -51,12 +51,41 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @desc    Fetch single product by ID
+// @desc    Fetch single product by ID or ProductId
 // @route   GET /api/products/:id
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    let product;
+    // Check if the param looks like a 6-digit numeric ID (our productId format)
+    if (/^\d{6}$/.test(req.params.id)) {
+        product = await Product.findOne({ productId: req.params.id });
+    }
+    
+    // If not found by productId (or format didn't match), try standard MongoDB ID
+    if (!product) {
+        // Validate if it's a valid ObjectId to prevent cast errors
+        if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            product = await Product.findById(req.params.id);
+            
+            // LAZY MIGRATION: If we found an old product without a productId, 
+            // generate one now and save it.
+            if (product && !product.productId) {
+                // Generate random 6 digit number
+                let uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+                // Ensure uniqueness check (simple loop)
+                let exists = await Product.findOne({ productId: uniqueId });
+                while(exists) {
+                    uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+                    exists = await Product.findOne({ productId: uniqueId });
+                }
+                
+                product.productId = uniqueId;
+                await product.save();
+            }
+        }
+    }
+
     if (product) {
       res.json(product);
     } else {
@@ -92,6 +121,12 @@ router.put('/:id', protect, async (req, res) => {
       // Exclude the 'id' field from the request body if it exists
       const { id, productId, ...updateData } = req.body;
       Object.assign(product, updateData);
+      
+      // Ensure productId exists if it was missing (migration on update)
+      if (!product.productId) {
+           product.productId = Math.floor(100000 + Math.random() * 900000).toString();
+      }
+      
       const updatedProduct = await product.save();
       res.json(updatedProduct);
     } else {
