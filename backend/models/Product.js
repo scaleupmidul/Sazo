@@ -1,7 +1,14 @@
 import mongoose from 'mongoose';
 
 const ProductSchema = new mongoose.Schema({
-  productId: { type: String, unique: true, sparse: true }, // Added dynamic numeric ID
+  productId: { 
+    type: String, 
+    unique: true, 
+    // Automatically generate a 6-digit number if not provided
+    default: function() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+  },
   name: { type: String, required: true },
   category: { type: String, required: true },
   price: { type: Number, required: true },
