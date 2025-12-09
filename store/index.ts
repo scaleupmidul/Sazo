@@ -10,7 +10,7 @@ const getTokenFromStorage = (): string | null => {
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
-    onlinePaymentInfo: '',
+    onlinePaymentInfo: 'অর্ডার কনফার্ম করতে ডেলিভারি চার্জ অগ্রিম প্রদান করুন —\n<b>01909285883 (Personal)</b>\nBkash / Nagad\nএবং নিচের তথ্যগুলো পূরণ করুন:',
     onlinePaymentInfoStyles: { fontSize: '0.875rem' },
     codEnabled: true, onlinePaymentEnabled: true, onlinePaymentMethods: [],
     sliderImages: [
