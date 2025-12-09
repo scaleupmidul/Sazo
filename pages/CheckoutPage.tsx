@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { LoaderCircle } from 'lucide-react';
@@ -126,7 +128,7 @@ const CheckoutPage: React.FC = () => {
           // Return a safe default object if storeSettings is null/undefined
           return {
             codEnabled: true,
-            onlinePaymentEnabled: true,
+            onlinePaymentEnabled: false, // Default to hidden if settings fail
             shippingOptions: [],
             onlinePaymentMethods: [],
             onlinePaymentInfo: '',
@@ -136,7 +138,7 @@ const CheckoutPage: React.FC = () => {
       }
       return {
         codEnabled: storeSettings.codEnabled ?? true,
-        onlinePaymentEnabled: storeSettings.onlinePaymentEnabled ?? true,
+        onlinePaymentEnabled: storeSettings.onlinePaymentEnabled ?? false, // Default to false (not disabled) if undefined
         shippingOptions: Array.isArray(storeSettings.shippingOptions) ? storeSettings.shippingOptions : [],
         onlinePaymentMethods: Array.isArray(storeSettings.onlinePaymentMethods) ? storeSettings.onlinePaymentMethods : [],
         onlinePaymentInfo: typeof storeSettings.onlinePaymentInfo === 'string' ? storeSettings.onlinePaymentInfo : '',
@@ -178,7 +180,7 @@ const CheckoutPage: React.FC = () => {
                 currency: 'BDT',
                 value: safeCartTotal,
                 items: cart.map(item => ({
-                    item_id: item.id,
+                    item_id: item.productId || item.id, // Use dynamic numeric ID
                     item_name: item.name,
                     price: item.price,
                     quantity: item.quantity,
@@ -189,6 +191,11 @@ const CheckoutPage: React.FC = () => {
     }
   }, [cart, safeCartTotal, loading]);
   
+  // LOGIC INVERSION: 
+  // safeSettings.onlinePaymentEnabled is now treating TRUE as DISABLED (Hidden).
+  const isOnlinePaymentDisabled = safeSettings.onlinePaymentEnabled === true;
+  const isOnlinePaymentVisible = !isOnlinePaymentDisabled;
+
   // Effect to set default form values once settings are loaded
   useEffect(() => {
     if (loading) return; 
@@ -199,15 +206,14 @@ const CheckoutPage: React.FC = () => {
 
         // Set default payment method if not set or current selection is invalid
         const isCodAvailable = safeSettings.codEnabled;
-        const isOnlineAvailable = safeSettings.onlinePaymentEnabled;
         
         const currentMethodValid = 
             (prev.paymentMethod === 'COD' && isCodAvailable) || 
-            (prev.paymentMethod === 'Online' && isOnlineAvailable);
+            (prev.paymentMethod === 'Online' && isOnlinePaymentVisible);
 
         if (!currentMethodValid) {
             if (isCodAvailable) newData.paymentMethod = 'COD';
-            else if (isOnlineAvailable) newData.paymentMethod = 'Online';
+            else if (isOnlinePaymentVisible) newData.paymentMethod = 'Online';
             else newData.paymentMethod = '';
             changed = true;
         }
@@ -220,7 +226,7 @@ const CheckoutPage: React.FC = () => {
 
         return changed ? newData : prev;
     });
-  }, [safeSettings, loading]);
+  }, [safeSettings, loading, isOnlinePaymentVisible]);
 
   const selectedShippingOption = useMemo(() => {
     if (!safeSettings.shippingOptions || safeSettings.shippingOptions.length === 0) return null;
@@ -235,7 +241,10 @@ const CheckoutPage: React.FC = () => {
   const totalPayable = safeCartTotal + effectiveShippingCharge;
 
   // We simply pass the string as is. white-space: pre-wrap in CSS handles newlines.
-  const formattedPaymentInfo = safeSettings.onlinePaymentInfo || '';
+  const formattedPaymentInfo = useMemo(() => {
+      const info = safeSettings.onlinePaymentInfo || '';
+      return info.replace(/(<\/?br\s*\/?>)\s*[\r\n]+/gi, '$1');
+  }, [safeSettings.onlinePaymentInfo]);
   
   if (loading) {
       return <CheckoutPageSkeleton />;
@@ -243,10 +252,10 @@ const CheckoutPage: React.FC = () => {
   
   // Guard against rendering an empty page while waiting for the redirect effect to run.
   if (!cart || cart.length === 0) {
-    return <CheckoutPageSkeleton />;
+      return <CheckoutPageSkeleton />;
   }
   
-  const noPaymentMethodAvailable = !safeSettings.codEnabled && !safeSettings.onlinePaymentEnabled;
+  const noPaymentMethodAvailable = !safeSettings.codEnabled && !isOnlinePaymentVisible;
   const noShippingMethodAvailable = safeSettings.shippingOptions.length === 0;
   const safeOnlinePaymentMethods = safeSettings.onlinePaymentMethods;
 
@@ -262,7 +271,7 @@ const CheckoutPage: React.FC = () => {
     if (!formData.shippingOptionId) {
         return false;
     }
-    if (formData.paymentMethod === 'Online' && safeSettings.onlinePaymentEnabled) {
+    if (formData.paymentMethod === 'Online' && isOnlinePaymentVisible) {
         if (!formData.paymentNumber.trim() || formData.onlinePaymentMethod === 'Choose' || !formData.transactionId.trim()) {
             return false;
         }
@@ -390,11 +399,11 @@ const CheckoutPage: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4">Shipping Information</h3>
             <div className="space-y-4">
-              <InputField label="Full Name (পূর্ণ নাম)" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Your Name" />
-              <InputField label="Phone Number (ফোন নাম্বার)" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="e.g., 017XX XXX XXX" />
-              <InputField label="Full Delivery Address (সম্পূর্ণ ডেলিভারি ঠিকানা)" name="address" value={formData.address} onChange={handleChange} placeholder="e.g., House 1, Road 2, Block A, Gulshan" />
+              <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Your Name" />
+              <InputField label="Phone Number" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="e.g., 017XX XXX XXX" />
+              <InputField label="Full Delivery Address" name="address" value={formData.address} onChange={handleChange} placeholder="e.g., House 1, Road 2, Block A, Gulshan" />
               {safeSettings.showCityField && (
-                <InputField label="City (শহর)" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Dhaka" />
+                <InputField label="City" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Dhaka" />
               )}
             </div>
           </div>
@@ -437,110 +446,116 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Payment Method</h3>
-            <div className="space-y-3">
-               {safeSettings.codEnabled && (
-                  <div 
-                    className="rounded-lg border border-stone-300 bg-white transition-all duration-200 overflow-hidden"
-                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
-                  >
-                    <label className="flex items-start space-x-3 p-4 cursor-pointer">
-                      <input type="radio" name="paymentMethod" value="COD" checked={formData.paymentMethod === 'COD'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <span className="font-semibold text-stone-700 text-sm block">Cash on Delivery (COD)</span>
-                        <p className="text-xs text-stone-500 mt-0.5">Pay upon receiving the product</p>
+          {/* HIDE PAYMENT METHOD SECTION IF NO OPTIONS ARE VISIBLE OR AVAILABLE */}
+          {(!noPaymentMethodAvailable) && (
+              <div>
+                <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Payment Method</h3>
+                <div className="space-y-3">
+                   {safeSettings.codEnabled && (
+                      <div 
+                        className="rounded-lg border border-stone-300 bg-white transition-all duration-200 overflow-hidden"
+                        onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
+                      >
+                        <label className="flex items-start space-x-3 p-4 cursor-pointer">
+                          <input type="radio" name="paymentMethod" value="COD" checked={formData.paymentMethod === 'COD'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-semibold text-stone-700 text-sm block">Cash on Delivery (COD)</span>
+                            <p className="text-xs text-stone-500 mt-0.5">Pay upon receiving the product</p>
+                          </div>
+                        </label>
                       </div>
-                    </label>
-                  </div>
-                )}
-                {safeSettings.onlinePaymentEnabled && (
-                  <div 
-                    className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'border-pink-600 bg-pink-50/30' : 'border-stone-300 bg-white'}`}
-                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
-                  >
-                    <label className="flex items-center space-x-3 p-4 cursor-pointer">
-                      <input type="radio" name="paymentMethod" value="Online" checked={formData.paymentMethod === 'Online'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 flex-shrink-0" />
-                       <div className="min-w-0 w-full">
-                         {/* Hide label if selected (fields will appear instead), show if NOT selected (so user knows what it is) */}
-                         {formData.paymentMethod !== 'Online' && (
-                            <span className="font-semibold text-stone-700 text-sm block">Bkash / Nagad</span>
-                         )}
-                       </div>
-                    </label>
-                    
-                    {/* Embedded Payment Fields - appear when selected */}
-                    {formData.paymentMethod === 'Online' && (
-                        <div className="px-4 pb-4 animate-fadeIn cursor-default" onClick={(e) => e.stopPropagation()}>
-                             {/* Payment Info Box */}
-                             <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800 mb-4 rounded-lg">
-                                <SafeHTML 
-                                    content={formattedPaymentInfo} 
-                                    style={{
-                                        fontSize: safeSettings.onlinePaymentInfoStyles?.fontSize || '0.875rem',
-                                        lineHeight: '1.5',
-                                        whiteSpace: 'pre-wrap'
-                                    }}
-                                />
-                              </div>
-
-                              <div className="space-y-4">
-                                <div className="space-y-1">
-                                  <label htmlFor="paymentNumber" className="text-sm font-medium text-stone-700">Your Sending Number (যে নাম্বার থেকে টাকা পাঠাবেন) <span className="text-red-500">*</span></label>
-                                  <input 
-                                    type="tel" 
-                                    id="paymentNumber" 
-                                    name="paymentNumber" 
-                                    value={formData.paymentNumber} 
-                                    onChange={handleChange} 
-                                    required={formData.paymentMethod === 'Online'} 
-                                    placeholder="e.g., 017XX XXX XXX" 
-                                    className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label htmlFor="onlinePaymentMethod" className="text-sm font-medium text-stone-700">Payment Method (পেমেন্ট পদ্ধতি) <span className="text-red-500">*</span></label>
-                                    <select 
-                                        id="onlinePaymentMethod" 
-                                        name="onlinePaymentMethod" 
-                                        value={formData.onlinePaymentMethod} 
-                                        onChange={handleChange} 
-                                        required={formData.paymentMethod === 'Online'} 
-                                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black"
-                                    >
-                                        <option value="Choose" disabled>Choose</option>
-                                        {safeOnlinePaymentMethods.map(method => (
-                                           <option key={method} value={method}>{method}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label htmlFor="transactionId" className="text-sm font-medium text-stone-700">Transaction ID (ট্রানজেকশন আইডি) <span className="text-red-500">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        id="transactionId" 
-                                        name="transactionId" 
-                                        value={formData.transactionId} 
-                                        onChange={handleChange} 
-                                        required={formData.paymentMethod === 'Online'} 
-                                        placeholder="e.g., 9K8G7F6H5J" 
-                                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
-                                    />
-                                </div>
-                              </div>
-                        </div>
                     )}
-                  </div>
-                )}
-                 {noPaymentMethodAvailable && (
-                   <div className="p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200">
-                       No payment methods are currently available. Please contact our support team for assistance.
-                   </div>
-                )}
-            </div>
-          </div>
+                    
+                    {/* INVERTED LOGIC: Only show if NOT Disabled (isOnlinePaymentVisible is true) */}
+                    {isOnlinePaymentVisible && (
+                      <div 
+                        className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'border-pink-600 bg-pink-50/30' : 'border-stone-300 bg-white'}`}
+                        onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
+                      >
+                        <label className="flex items-center space-x-3 p-4 cursor-pointer">
+                          <input type="radio" name="paymentMethod" value="Online" checked={formData.paymentMethod === 'Online'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 flex-shrink-0" />
+                           <div className="min-w-0 w-full">
+                             {/* Hide label if selected (fields will appear instead), show if NOT selected (so user knows what it is) */}
+                             {formData.paymentMethod !== 'Online' && (
+                                <span className="font-semibold text-stone-700 text-sm block">Bkash / Nagad</span>
+                             )}
+                           </div>
+                        </label>
+                        
+                        {/* Embedded Payment Fields - appear when selected */}
+                        {formData.paymentMethod === 'Online' && (
+                            <div className="px-4 pb-4 animate-fadeIn cursor-default" onClick={(e) => e.stopPropagation()}>
+                                 {/* Payment Info Box */}
+                                 <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800 mb-4 rounded-lg">
+                                    <SafeHTML 
+                                        content={formattedPaymentInfo} 
+                                        style={{
+                                            fontSize: safeSettings.onlinePaymentInfoStyles?.fontSize || '0.875rem',
+                                            lineHeight: '1.5',
+                                            whiteSpace: 'pre-wrap'
+                                        }}
+                                    />
+                                  </div>
+
+                                  <div className="space-y-4">
+                                    <div className="space-y-1">
+                                      <label htmlFor="paymentNumber" className="text-sm font-medium text-stone-700">Your Sending Number (যে নাম্বার থেকে টাকা পাঠাবেন) <span className="text-red-500">*</span></label>
+                                      <input 
+                                        type="tel" 
+                                        id="paymentNumber" 
+                                        name="paymentNumber" 
+                                        value={formData.paymentNumber} 
+                                        onChange={handleChange} 
+                                        required={formData.paymentMethod === 'Online'} 
+                                        placeholder="e.g., 017XX XXX XXX" 
+                                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label htmlFor="onlinePaymentMethod" className="text-sm font-medium text-stone-700">Payment Method (পেমেন্ট পদ্ধতি) <span className="text-red-500">*</span></label>
+                                        <select 
+                                            id="onlinePaymentMethod" 
+                                            name="onlinePaymentMethod" 
+                                            value={formData.onlinePaymentMethod} 
+                                            onChange={handleChange} 
+                                            required={formData.paymentMethod === 'Online'} 
+                                            className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black"
+                                        >
+                                            <option value="Choose" disabled>Choose</option>
+                                            {safeOnlinePaymentMethods.map(method => (
+                                               <option key={method} value={method}>{method}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label htmlFor="transactionId" className="text-sm font-medium text-stone-700">Transaction ID (ট্রানজেকশন আইডি) <span className="text-red-500">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            id="transactionId" 
+                                            name="transactionId" 
+                                            value={formData.transactionId} 
+                                            onChange={handleChange} 
+                                            required={formData.paymentMethod === 'Online'} 
+                                            placeholder="e.g., 9K8G7F6H5J" 
+                                            className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
+                                        />
+                                    </div>
+                                  </div>
+                            </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </div>
+          )}
+          
+          {noPaymentMethodAvailable && (
+               <div className="p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200 mt-4">
+                   No payment methods are currently available. Please contact our support team for assistance.
+               </div>
+          )}
 
           <button 
             type="submit" 
@@ -556,12 +571,6 @@ const CheckoutPage: React.FC = () => {
                 <span>Place Order</span>
              )}
           </button>
-          
-          {!isFormValid && (
-             <p className="text-red-500 text-xs text-center mt-2 font-medium animate-pulse">
-                Fill all required fields ( সব তথ্য পূরণ করুন )
-             </p>
-          )}
         </form>
 
       </div>
