@@ -48,7 +48,9 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
   
   const handleNavigateToDetails = () => {
       onClose();
-      navigate(`/product/${product.id}`);
+      // Use productId if available, otherwise fallback to id
+      const linkId = product.productId || product.id;
+      navigate(`/product/${linkId}`);
   }
 
   const originalPrice = product.price + 200;
@@ -68,7 +70,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
           <X className="w-6 h-6" />
         </button>
 
-        <div className="aspect-[3.5/4] overflow-hidden rounded-xl">
+        <div className="aspect-[3/4] overflow-hidden rounded-xl">
             {/* FIX: Corrected property access from `product.image` to `product.images[0]` to match the Product type. */}
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
         </div>
