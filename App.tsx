@@ -50,18 +50,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
-        const productId = productMatch[1].split('?')[0];
+        const urlId = productMatch[1].split('?')[0];
         
-        // Find the latest version of the product from the store
-        const product = products.find(p => p.id === productId);
+        // Find product by numeric productId (preferred) or legacy id
+        const product = products.find(p => p.productId === urlId || p.id === urlId);
 
         // Update selectedProduct if:
         // 1. We found a product AND it's different from the currently selected one (reference check)
         // 2. Or if we haven't selected anything yet.
-        // This ensures that if images are updated in the background, the view refreshes.
         if (product && selectedProduct !== product) {
             setSelectedProduct(product);
-        } else if (!product && selectedProduct && selectedProduct.id !== productId) {
+        } else if (!product && selectedProduct && (selectedProduct.productId !== urlId && selectedProduct.id !== urlId)) {
              // If product isn't found in list (e.g. direct link before load), clear selection or keep waiting
              // For now, we leave it to allow loadInitialData to populate it later
         } else if (!product && !selectedProduct) {
