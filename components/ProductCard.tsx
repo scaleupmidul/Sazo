@@ -13,10 +13,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) 
     const originalPrice = product.price + 200;
     const navigate = useAppStore(state => state.navigate);
 
+    // Use productId (numeric) for the URL if available, fallback to id
+    const linkId = product.productId || product.id;
+
     return (
         <div 
             className="bg-white rounded-lg border border-stone-200 overflow-hidden transition duration-500 ease-in-out shadow-lg hover:shadow-2xl hover:-translate-y-2 group cursor-pointer h-full flex flex-col"
-            onClick={() => navigate(`/product/${product.id}`)}
+            onClick={() => navigate(`/product/${linkId}`)}
         >
             <div
                 className="relative w-full bg-stone-200 flex-shrink-0"
@@ -69,7 +72,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) 
                     <button
                         onClick={(e) => { 
                             e.stopPropagation(); 
-                            navigate(`/product/${product.id}`);
+                            navigate(`/product/${linkId}`);
                         }}
                         className="w-full bg-pink-600 text-white rounded-full hover:bg-pink-700 transition duration-300 flex items-center justify-center space-x-2 active:scale-95 text-sm sm:text-base font-bold py-[0.4rem] sm:py-2"
                     >
