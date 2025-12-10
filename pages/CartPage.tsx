@@ -1,127 +1,88 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+// pages/CartPage.tsx
+
+import React, { useEffect, useState } from 'react';
+import { CartItem } from '../types';
+import { ShoppingCart, Truck, X, ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useAppStore } from '../store';
-import { LoaderCircle } from 'lucide-react';
 
-// Improved InputField with text-base on mobile to prevent iOS zoom
-const InputField: React.FC<{ label: string; name: string; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; required?: boolean; placeholder?: string; }> = 
-({ label, name, type = 'text', value, onChange, required = true, placeholder }) => (
-    <div className="space-y-1.5">
-      <label htmlFor={name} className="text-sm font-medium text-stone-700">{label} {required && <span className="text-red-500">*</span>}</label>
-      <input 
-        type={type} 
-        id={name} 
-        name={name} 
-        value={value || ''} 
-        onChange={onChange} 
-        required={required} 
-        placeholder={placeholder} 
-        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
-      />
+const CartItemComponent: React.FC<{ item: CartItem, updateCartQuantity: (id: string, size: string, newQuantity: number) => void }> = ({ item, updateCartQuantity }) => (
+  <div className="
+    group flex gap-4 
+    bg-white p-4 rounded-xl shadow-sm border border-stone-100
+    lg:bg-transparent lg:p-0 lg:rounded-none lg:shadow-none lg:border-0 lg:border-b lg:border-stone-100 lg:py-6 lg:first:pt-0 lg:last:border-0
+    transition-all duration-300 hover:shadow-md lg:hover:shadow-none lg:hover:bg-stone-50/30
+  ">
+    
+    {/* Image Section */}
+    <div className="w-24 sm:w-28 lg:w-32 aspect-[3/4] flex-shrink-0 overflow-hidden rounded-lg border border-stone-100 bg-stone-50 shadow-sm">
+      <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
     </div>
-);
 
-const CheckoutPageSkeleton: React.FC = () => (
-    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
-        {/* Page Title Box */}
-        <div className="h-10 bg-stone-200 rounded w-48 mx-auto mb-8"></div>
-        
-        <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8 xl:gap-12">
-            
-            {/* Order Summary Skeleton (Right Column - Wider) */}
-            <div className="lg:col-span-2 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
-                <div className="h-7 bg-stone-200 rounded w-1/2 mb-6"></div>
-                <div className="space-y-4">
-                    {/* Item Skeletons */}
-                    <div className="flex gap-3">
-                        <div className="w-16 h-20 bg-stone-200 rounded"></div>
-                        <div className="flex-1 space-y-2 py-1">
-                            <div className="h-4 bg-stone-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-stone-200 rounded w-1/2"></div>
-                            <div className="h-4 bg-stone-200 rounded w-1/3"></div>
-                        </div>
-                    </div>
-                     <div className="flex gap-3">
-                        <div className="w-16 h-20 bg-stone-200 rounded"></div>
-                        <div className="flex-1 space-y-2 py-1">
-                            <div className="h-4 bg-stone-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-stone-200 rounded w-1/2"></div>
-                            <div className="h-4 bg-stone-200 rounded w-1/3"></div>
-                        </div>
-                    </div>
-                    
-                    <div className="h-px bg-stone-200 my-4"></div>
-                    
-                    {/* Totals */}
-                    <div className="flex justify-between"><div className="h-4 bg-stone-200 rounded w-1/3"></div><div className="h-4 bg-stone-200 rounded w-1/4"></div></div>
-                    <div className="flex justify-between mt-2"><div className="h-4 bg-stone-200 rounded w-1/2"></div><div className="h-4 bg-stone-200 rounded w-1/4"></div></div>
-                    
-                    <div className="h-px bg-stone-200 my-4"></div>
-                    <div className="flex justify-between items-center"><div className="h-6 bg-stone-200 rounded w-1/3"></div><div className="h-8 bg-stone-200 rounded w-1/3"></div></div>
-                </div>
-            </div>
-
-            {/* Form Skeleton (Left Column) */}
-            <div className="lg:col-span-3 space-y-8 order-2 lg:order-1">
-                {/* Shipping Info Section */}
-                <div>
-                    <div className="h-7 bg-stone-200 rounded w-1/3 mb-6 pb-2"></div>
-                    <div className="space-y-4">
-                        <div className="h-12 bg-stone-200 rounded-lg w-full"></div>
-                        <div className="h-12 bg-stone-200 rounded-lg w-full"></div>
-                        <div className="h-12 bg-stone-200 rounded-lg w-full"></div>
-                        <div className="h-12 bg-stone-200 rounded-lg w-full"></div>
-                    </div>
-                </div>
-
-                {/* Delivery Area Section */}
-                <div>
-                    <div className="h-7 bg-stone-200 rounded w-1/3 mb-6 pt-4"></div>
-                    <div className="space-y-3">
-                        <div className="h-14 bg-stone-200 rounded-lg w-full"></div>
-                        <div className="h-14 bg-stone-200 rounded-lg w-full"></div>
-                    </div>
-                </div>
-
-                {/* Payment Method Section */}
-                <div>
-                    <div className="h-7 bg-stone-200 rounded w-1/3 mb-6 pt-4"></div>
-                     <div className="space-y-3">
-                        <div className="h-14 bg-stone-200 rounded-lg w-full"></div>
-                        <div className="h-14 bg-stone-200 rounded-lg w-full"></div>
-                    </div>
-                </div>
-                
-                {/* Submit Button */}
-                <div className="h-14 bg-stone-200 rounded-full mt-8 w-full"></div>
-            </div>
+    {/* Details Section */}
+    <div className="flex flex-col flex-1 justify-between min-w-0">
+      
+      {/* Top: Name & Remove */}
+      <div className="flex justify-between items-start gap-3">
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="text-base sm:text-lg font-bold text-stone-800 line-clamp-2 leading-snug">{item.name}</h3>
+          <p className="text-xs sm:text-sm text-stone-500 font-medium inline-flex items-center bg-stone-50 px-2 py-1 rounded border border-stone-100">
+            Size: <span className="text-stone-900 ml-1 font-bold">{item.size === 'Free' ? 'Free Size' : item.size}</span>
+          </p>
         </div>
-    </main>
+        {/* Remove Button */}
+        <button 
+          onClick={() => updateCartQuantity(item.id, item.size, 0)} 
+          className="text-stone-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 flex-shrink-0 -mr-2 -mt-2 bg-stone-50 sm:bg-transparent"
+          aria-label="Remove item"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Bottom: Price & Quantity - Added gap-3 and shrink control to prevent overlap */}
+      <div className="flex items-end justify-between mt-4 pt-3 border-t border-dashed border-stone-100 lg:border-none lg:pt-0 lg:mt-2 gap-3">
+        <div className="flex flex-col min-w-0">
+            <span className="text-xs text-stone-400 font-bold uppercase tracking-wider mb-0.5">Total</span>
+            <span className="text-xl font-extrabold text-pink-600 leading-none whitespace-nowrap">৳{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+        </div>
+
+        {/* Quantity Controller - Slightly more compact on mobile (w-9) to allow space for price */}
+        <div className="flex items-center bg-white border border-stone-200 rounded-lg h-9 sm:h-10 shadow-sm flex-shrink-0">
+          <button 
+            onClick={() => updateCartQuantity(item.id, item.size, item.quantity - 1)} 
+            className="w-9 sm:w-10 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-l-lg transition border-r border-stone-100 hover:bg-pink-50"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="w-9 sm:w-10 text-center font-bold text-base text-stone-800 select-none">{item.quantity}</span>
+          <button 
+            onClick={() => updateCartQuantity(item.id, item.size, item.quantity + 1)} 
+            className="w-9 sm:w-10 h-full flex items-center justify-center text-stone-500 hover:text-pink-600 active:bg-pink-50 rounded-r-lg transition border-l border-stone-100 hover:bg-pink-50"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 );
 
-// Component to safely render HTML content to prevent crashes
-const SafeHTML: React.FC<{ content: string; style?: React.CSSProperties }> = ({ content, style }) => {
-    try {
-        if (!content) return null;
-        return (
-            <div
-                className="font-semibold text-stone-800"
-                style={style}
-                dangerouslySetInnerHTML={{ __html: content }}
-            />
-        );
-    } catch (e) {
-        // Fallback to plain text if HTML parsing fails
-        return <div className="font-semibold text-stone-800" style={style}>{content}</div>;
-    }
-};
+const CartPage: React.FC = () => {
+  const { cart, updateCartQuantity, navigate, cartTotal, products, loading, ensureAllProductsLoaded, fullProductsLoaded } = useAppStore(state => ({
+    cart: state.cart,
+    updateCartQuantity: state.updateCartQuantity,
+    navigate: state.navigate,
+    cartTotal: state.cartTotal,
+    products: state.products,
+    loading: state.loading,
+    ensureAllProductsLoaded: state.ensureAllProductsLoaded,
+    fullProductsLoaded: state.fullProductsLoaded
+  }));
 
-const CheckoutPage: React.FC = () => {
-  const { cart, cartTotal, navigate, clearCart, notify, addOrder, settings: storeSettings, loading, products, ensureAllProductsLoaded, fullProductsLoaded } = useAppStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSubmittingRef = useRef(false);
   const [gtmFired, setGtmFired] = useState(false);
-  
+
   // Ensure full product list is loaded to get correct productIds for analytics
   useEffect(() => {
       if (!fullProductsLoaded) {
@@ -129,55 +90,6 @@ const CheckoutPage: React.FC = () => {
       }
   }, [fullProductsLoaded, ensureAllProductsLoaded]);
 
-  // Robustly handle settings to prevent crashes if data is missing or malformed
-  const safeSettings = useMemo(() => {
-      if (!storeSettings) {
-          // Return a safe default object if storeSettings is null/undefined
-          return {
-            codEnabled: true,
-            onlinePaymentEnabled: true,
-            shippingOptions: [],
-            onlinePaymentMethods: [],
-            onlinePaymentInfo: '',
-            onlinePaymentInfoStyles: { fontSize: '0.875rem' },
-            showCityField: true,
-          };
-      }
-      return {
-        codEnabled: storeSettings.codEnabled ?? true,
-        onlinePaymentEnabled: storeSettings.onlinePaymentEnabled ?? true, // Default to true (Enabled)
-        shippingOptions: Array.isArray(storeSettings.shippingOptions) ? storeSettings.shippingOptions : [],
-        onlinePaymentMethods: Array.isArray(storeSettings.onlinePaymentMethods) ? storeSettings.onlinePaymentMethods : [],
-        onlinePaymentInfo: typeof storeSettings.onlinePaymentInfo === 'string' ? storeSettings.onlinePaymentInfo : '',
-        onlinePaymentInfoStyles: storeSettings.onlinePaymentInfoStyles || { fontSize: '0.875rem' },
-        showCityField: storeSettings.showCityField ?? true,
-      };
-  }, [storeSettings]);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    city: '',
-    paymentMethod: '', // Initialize empty, let effect handle default
-    shippingOptionId: '', // Initialize empty
-    paymentNumber: '',
-    onlinePaymentMethod: 'Choose',
-    transactionId: '',
-  });
-
-  // Calculate safe values for render
-  const safeCartTotal = Number.isFinite(cartTotal) ? cartTotal : 0;
-
-  useEffect(() => {
-    // After the initial data load is complete, check if the cart is empty.
-    // If it is, redirect the user to the shop page.
-    if (!loading && (!cart || cart.length === 0)) {
-      navigate('/shop');
-      notify("Your cart is empty. Let's find something for you!", 'error');
-    }
-  }, [loading, cart, navigate, notify]);
-  
   // GTM Event Trigger - Wait for product IDs to be resolved
   useEffect(() => {
     if (!loading && cart && cart.length > 0 && !gtmFired) {
@@ -187,18 +99,18 @@ const CheckoutPage: React.FC = () => {
             const productInStore = products.find(p => p.id === item.id);
             const idToCheck = item.productId || productInStore?.productId || item.id;
             // If ID looks like a Mongo ObjectID (24 hex chars) and we haven't loaded all products yet, we wait.
-            // This is a heuristic to prefer the short ID (e.g. "102342") over "6605a..."
             return idToCheck.length === 24 && !fullProductsLoaded;
         });
 
         if (pendingIdResolution) return;
 
         window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ ecommerce: null }); // Clear previous ecommerce object
         window.dataLayer.push({
-            event: 'begin_checkout',
+            event: 'view_cart',
             ecommerce: {
                 currency: 'BDT',
-                value: safeCartTotal,
+                value: cartTotal,
                 items: cart.map(item => {
                     const productInStore = products.find(p => p.id === item.id);
                     const finalId = item.productId || productInStore?.productId || item.id;
@@ -215,406 +127,93 @@ const CheckoutPage: React.FC = () => {
         });
         setGtmFired(true);
     }
-  }, [cart, safeCartTotal, loading, products, fullProductsLoaded, gtmFired]);
-  
-  // LOGIC FIX: safeSettings.onlinePaymentEnabled is TRUE when ENABLED.
-  const isOnlinePaymentVisible = safeSettings.onlinePaymentEnabled;
+  }, [cart, cartTotal, loading, products, fullProductsLoaded, gtmFired]);
 
-  // Effect to set default form values once settings are loaded
-  useEffect(() => {
-    if (loading) return; 
-    
-    setFormData(prev => {
-        const newData = { ...prev };
-        let changed = false;
-
-        // Set default payment method if not set or current selection is invalid
-        const isCodAvailable = safeSettings.codEnabled;
-        
-        const currentMethodValid = 
-            (prev.paymentMethod === 'COD' && isCodAvailable) || 
-            (prev.paymentMethod === 'Online' && isOnlinePaymentVisible);
-
-        if (!currentMethodValid) {
-            if (isCodAvailable) newData.paymentMethod = 'COD';
-            else if (isOnlinePaymentVisible) newData.paymentMethod = 'Online';
-            else newData.paymentMethod = '';
-            changed = true;
-        }
-
-        // Set default shipping option if not set
-        if (!prev.shippingOptionId && safeSettings.shippingOptions.length > 0) {
-            newData.shippingOptionId = safeSettings.shippingOptions[0].id;
-            changed = true;
-        }
-
-        return changed ? newData : prev;
-    });
-  }, [safeSettings, loading, isOnlinePaymentVisible]);
-
-  const selectedShippingOption = useMemo(() => {
-    if (!safeSettings.shippingOptions || safeSettings.shippingOptions.length === 0) return null;
-    return safeSettings.shippingOptions.find(opt => opt.id === formData.shippingOptionId) || safeSettings.shippingOptions[0];
-  }, [formData.shippingOptionId, safeSettings.shippingOptions]);
-
-  // Calculate derived values safely
-  const shippingCharge = selectedShippingOption?.charge || 0;
-  const isOnlinePayment = formData.paymentMethod === 'Online';
-  // If online payment is selected, shipping charge is not added to the total payable
-  const effectiveShippingCharge = isOnlinePayment ? 0 : shippingCharge;
-  const totalPayable = safeCartTotal + effectiveShippingCharge;
-
-  // We simply pass the string as is. white-space: pre-wrap in CSS handles newlines.
-  const formattedPaymentInfo = useMemo(() => {
-      const info = safeSettings.onlinePaymentInfo || '';
-      return info.replace(/(<\/?br\s*\/?>)\s*[\r\n]+/gi, '$1');
-  }, [safeSettings.onlinePaymentInfo]);
-  
-  if (loading) {
-      return <CheckoutPageSkeleton />;
+  if (cart.length === 0) {
+    return (
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center p-8 sm:p-16 bg-white rounded-xl shadow-lg border border-stone-200 w-full max-w-lg mx-4">
+          <ShoppingCart className="w-12 h-12 text-pink-300 mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-stone-800 mb-2">Your Cart is Empty</h2>
+          <p className="text-sm sm:text-base text-stone-600 mb-6">It looks like you haven't added any SAZO items yet.</p>
+          <button onClick={() => navigate('/shop')} className="bg-pink-600 text-white font-medium px-8 py-3 rounded-full hover:bg-pink-700 transition duration-300 shadow active:scale-95 w-full sm:w-auto">
+            Start Shopping
+          </button>
+        </div>
+      </main>
+    );
   }
-  
-  // Guard against rendering an empty page while waiting for the redirect effect to run.
-  if (!cart || cart.length === 0) {
-      return <CheckoutPageSkeleton />;
-  }
-  
-  const noPaymentMethodAvailable = !safeSettings.codEnabled && !isOnlinePaymentVisible;
-  const noShippingMethodAvailable = safeSettings.shippingOptions.length === 0;
-  const safeOnlinePaymentMethods = safeSettings.onlinePaymentMethods;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const isFormValid = (() => {
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim() || (safeSettings.showCityField && !formData.city.trim())) {
-        return false;
-    }
-    if (!formData.shippingOptionId) {
-        return false;
-    }
-    if (formData.paymentMethod === 'Online' && isOnlinePaymentVisible) {
-        if (!formData.paymentNumber.trim() || formData.onlinePaymentMethod === 'Choose' || !formData.transactionId.trim()) {
-            return false;
-        }
-    }
-    if (noPaymentMethodAvailable || noShippingMethodAvailable) {
-        return false;
-    }
-    return true;
-  })();
-
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    e.stopPropagation(); // Explicitly stop propagation to prevent bubbling
-    
-    // Prevent multiple clicks immediately using Ref (synchronous)
-    if (isSubmittingRef.current) return;
-    if (isSubmitting) return; // Backup check
-
-    if (!isFormValid) {
-        notify("Please fill in all required fields.", "error");
-        return;
-    }
-    if (safeCartTotal === 0) {
-      notify("Your cart is empty. Cannot place an order.", "error");
-      return;
-    }
-
-    // Set submitting state immediately
-    isSubmittingRef.current = true;
-    setIsSubmitting(true);
-
-    const paymentInfo = {
-        paymentMethod: formData.paymentMethod as 'COD' | 'Online',
-        paymentDetails: formData.paymentMethod === 'Online' ? {
-            paymentNumber: formData.paymentNumber,
-            method: formData.onlinePaymentMethod,
-            amount: totalPayable,
-            transactionId: formData.transactionId
-        } : undefined
-    };
-    
-    // Prepare cart items with guaranteed productIds for the backend
-    const cartForOrder = cart.map(item => {
-        const productInStore = products.find(p => p.id === item.id);
-        const finalId = item.productId || productInStore?.productId || item.id;
-        return {
-            ...item,
-            productId: finalId
-        };
-    });
-    
-    try {
-        const newOrder = await addOrder(
-          { name: formData.name, phone: formData.phone, address: formData.address, city: formData.city },
-          cartForOrder,
-          totalPayable,
-          paymentInfo,
-          shippingCharge // Pass the raw shipping charge from options
-        );
-    
-        // Priority: Use the friendly orderId if available (numeric 5-7 chars)
-        // Fallback: Use the system id
-        const orderId = newOrder.orderId || newOrder.id || (newOrder as any)._id;
-        
-        if (orderId) {
-            clearCart();
-            navigate(`/thank-you/${orderId}`);
-        } else {
-            // Fallback if no ID is found (should not happen if backend works)
-            notify("Order placed but ID missing. Please contact support.", "error");
-            navigate('/'); 
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
-        }
-    } catch (error: any) {
-        console.error("Order creation failed:", error);
-        notify(error.message || "Failed to place order. Please try again.", "error");
-        // Reset submission state on error so user can try again
-        isSubmittingRef.current = false;
-        setIsSubmitting(false);
-    }
-  };
 
   return (
-    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
-      <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
+    <main className="max-w-screen-2xl mx-auto px-2 sm:px-6 lg:px-8 pt-4 sm:pt-12 pb-12">
+      <h2 className="text-2xl sm:text-4xl font-bold text-stone-900 mb-5 sm:mb-8 text-center">Your Shopping Cart</h2>
       
-      {/* UPDATED GRID: Adjusted gap for standard desktop layout */}
-      <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8 xl:gap-12">
-        
-        {/* Order Summary Column (2 columns - 40%) */}
-        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
-          <h3 className="text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+        {/* Cart Items Column */}
+        <div className="lg:col-span-8 mb-6 lg:mb-0">
+           {/* Mobile: Space between cards. Desktop: White container with dividers */}
+           <div className="space-y-4 lg:space-y-0 lg:bg-white lg:p-6 lg:rounded-xl lg:shadow-lg lg:border lg:border-stone-200">
+              {cart.map(item => <CartItemComponent key={`${item.id}-${item.size}`} item={item} updateCartQuantity={updateCartQuantity} />)}
+           </div>
+        </div>
+
+        {/* Summary Column */}
+        <div className="lg:col-span-4 bg-white p-5 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit">
+          <h3 className="text-lg sm:text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
           
-          {/* Cart Items List - Scrollable on mobile to save space */}
-          <div className="space-y-4 mb-6 max-h-60 sm:max-h-none overflow-y-auto pr-1 custom-scrollbar">
+          {/* Detailed Items List in Summary - Hidden on mobile, shown on desktop for reference */}
+          <div className="hidden lg:block space-y-4 mb-6 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
             {cart.map((item) => (
               <div key={`${item.id}-${item.size}`} className="flex gap-3">
-                <div className="w-16 aspect-[3.5/4] flex-shrink-0 overflow-hidden rounded-md border border-stone-100">
+                <div className="w-12 aspect-[3/4] flex-shrink-0 overflow-hidden rounded-md border border-stone-100">
                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="flex-1 flex flex-col justify-center">
-                  <h4 className="text-sm font-bold text-stone-800 line-clamp-2 leading-tight">{item.name}</h4>
-                   <p className="text-xs text-stone-500 mt-1">
+                <div className="flex-1 flex flex-col justify-center min-w-0">
+                  <h4 className="text-xs font-bold text-stone-800 line-clamp-2 leading-tight">{item.name}</h4>
+                   <p className="text-[10px] text-stone-500 mt-0.5">
                     Size: {item.size === 'Free' ? 'Free' : item.size} &bull; Qty: {item.quantity}
                   </p>
-                  <p className="text-sm font-bold text-pink-600 mt-1">
+                  <p className="text-xs font-bold text-pink-600 mt-0.5">
                     ৳{(item.price * item.quantity).toLocaleString('en-IN')}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="border-t border-stone-200 pt-4 space-y-3 text-sm">
+          
+          <div className="space-y-3 text-sm border-t border-stone-200 pt-4">
             <div className="flex justify-between text-stone-600">
-              <span>Subtotal</span>
-              <span>৳{safeCartTotal.toLocaleString('en-IN')}</span>
+              <span>Subtotal ({cart.length} items)</span>
+              <span className="font-medium">৳{cartTotal.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-stone-600 border-b border-stone-200 pb-4">
-              <span className="font-semibold w-2/3">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
-              <span>{isOnlinePayment ? '(Advance)' : `৳${shippingCharge.toLocaleString('en-IN')}`}</span>
+            <div className="flex justify-between text-stone-600">
+              <span>Shipping (Est.)</span>
+              <span>—</span>
             </div>
           </div>
           
           <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
             <span className="text-base font-bold text-stone-900">Total Payable</span>
-            <span className="text-xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
+            <span className="text-xl font-extrabold text-pink-600">৳{cartTotal.toLocaleString('en-IN')}</span>
+          </div>
+
+          <p className="text-[10px] sm:text-xs text-stone-400 mt-3 text-center">Shipping & taxes calculated at checkout.</p>
+          
+          <div className="mt-6 space-y-3">
+            <button onClick={() => navigate('/checkout')} className="w-full bg-pink-600 text-white text-base font-bold px-6 py-3.5 rounded-full hover:bg-pink-700 transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95">
+              <Truck className="w-5 h-5" />
+              <span>Proceed to Checkout</span>
+            </button>
+
+            <button onClick={() => navigate('/shop')} className="w-full bg-white text-stone-600 border border-stone-300 text-base font-bold px-6 py-3.5 rounded-full hover:bg-stone-50 hover:text-pink-600 transition duration-300 shadow-sm flex items-center justify-center space-x-2 active:scale-95">
+              <ArrowLeft className="w-5 h-5" />
+              <span>Continue Shopping</span>
+            </button>
           </div>
         </div>
-
-        {/* Checkout Form Column (3 columns - 60%) */}
-        <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-6 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
-          <div>
-            <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4">Shipping Information</h3>
-            <div className="space-y-4">
-              <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Your Name" />
-              <InputField label="Phone Number" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="e.g., 017XX XXX XXX" />
-              <InputField label="Full Delivery Address" name="address" value={formData.address} onChange={handleChange} placeholder="e.g., House 1, Road 2, Block A, Gulshan" />
-              {safeSettings.showCityField && (
-                <InputField label="City" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Dhaka" />
-              )}
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Delivery Charge</h3>
-            <div className="space-y-3">
-              {safeSettings.shippingOptions.length > 0 ? safeSettings.shippingOptions.map((option) => {
-                 if (!option || !option.id) return null;
-                 const isSelected = formData.shippingOptionId === option.id;
-                 return (
-                    <div 
-                        key={option.id} 
-                        className={`rounded-lg border transition-all duration-200 overflow-hidden ${isSelected ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
-                        onClick={() => setFormData(prev => ({ ...prev, shippingOptionId: option.id }))}
-                    >
-                      <label className="flex items-center w-full p-4 cursor-pointer gap-3">
-                        <input 
-                            type="radio" 
-                            name="shippingOptionId" 
-                            value={option.id} 
-                            checked={isSelected} 
-                            onChange={handleChange} 
-                            className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 flex-shrink-0" 
-                        />
-                        <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center flex-wrap gap-2">
-                                <span className="font-semibold text-stone-700 text-sm break-words">{option.label || 'Standard Shipping'}</span>
-                                <span className="font-bold text-stone-900 text-sm flex-shrink-0">{(option.charge || 0).toLocaleString('en-IN')} ৳</span>
-                            </div>
-                        </div>
-                      </label>
-                    </div>
-                 );
-              }) : (
-                   <div className="p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200">
-                       No shipping options are currently available. Please contact our support team for assistance.
-                   </div>
-              )}
-            </div>
-          </div>
-
-          {/* HIDE PAYMENT METHOD SECTION IF NO OPTIONS ARE VISIBLE OR AVAILABLE */}
-          {(!noPaymentMethodAvailable) && (
-              <div>
-                <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Payment Method</h3>
-                <div className="space-y-3">
-                   {safeSettings.codEnabled && (
-                      <div 
-                        className="rounded-lg border border-stone-300 bg-white transition-all duration-200 overflow-hidden"
-                        onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
-                      >
-                        <label className="flex items-start space-x-3 p-4 cursor-pointer">
-                          <input type="radio" name="paymentMethod" value="COD" checked={formData.paymentMethod === 'COD'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="font-semibold text-stone-700 text-sm block">Cash on Delivery (COD)</span>
-                            <p className="text-xs text-stone-500 mt-0.5">Pay upon receiving the product</p>
-                          </div>
-                        </label>
-                      </div>
-                    )}
-                    
-                    {/* INVERTED LOGIC REMOVED: Only show if Enabled (isOnlinePaymentVisible is true) */}
-                    {isOnlinePaymentVisible && (
-                      <div 
-                        className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'border-pink-600 bg-pink-50/30' : 'border-stone-300 bg-white'}`}
-                        onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
-                      >
-                        <label className="flex items-center space-x-3 p-4 cursor-pointer">
-                          <input type="radio" name="paymentMethod" value="Online" checked={formData.paymentMethod === 'Online'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600 flex-shrink-0" />
-                           <div className="min-w-0 w-full">
-                             {/* Hide label if selected (fields will appear instead), show if NOT selected (so user knows what it is) */}
-                             {formData.paymentMethod !== 'Online' && (
-                                <span className="font-semibold text-stone-700 text-sm block">Bkash / Nagad</span>
-                             )}
-                           </div>
-                        </label>
-                        
-                        {/* Embedded Payment Fields - appear when selected */}
-                        {formData.paymentMethod === 'Online' && (
-                            <div className="px-4 pb-4 animate-fadeIn cursor-default" onClick={(e) => e.stopPropagation()}>
-                                 {/* Payment Info Box */}
-                                 <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800 mb-4 rounded-lg">
-                                    <SafeHTML 
-                                        content={formattedPaymentInfo} 
-                                        style={{
-                                            fontSize: safeSettings.onlinePaymentInfoStyles?.fontSize || '0.875rem',
-                                            lineHeight: '1.5',
-                                            whiteSpace: 'pre-wrap'
-                                        }}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-4">
-                                    <div className="space-y-1">
-                                      <label htmlFor="paymentNumber" className="text-sm font-medium text-stone-700">Your Sending Number (যে নাম্বার থেকে টাকা পাঠাবেন) <span className="text-red-500">*</span></label>
-                                      <input 
-                                        type="tel" 
-                                        id="paymentNumber" 
-                                        name="paymentNumber" 
-                                        value={formData.paymentNumber} 
-                                        onChange={handleChange} 
-                                        required={formData.paymentMethod === 'Online'} 
-                                        placeholder="e.g., 017XX XXX XXX" 
-                                        className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
-                                      />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label htmlFor="onlinePaymentMethod" className="text-sm font-medium text-stone-700">Payment Method (পেমেন্ট পদ্ধতি) <span className="text-red-500">*</span></label>
-                                        <select 
-                                            id="onlinePaymentMethod" 
-                                            name="onlinePaymentMethod" 
-                                            value={formData.onlinePaymentMethod} 
-                                            onChange={handleChange} 
-                                            required={formData.paymentMethod === 'Online'} 
-                                            className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black"
-                                        >
-                                            <option value="Choose" disabled>Choose</option>
-                                            {safeOnlinePaymentMethods.map(method => (
-                                               <option key={method} value={method}>{method}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label htmlFor="transactionId" className="text-sm font-medium text-stone-700">Transaction ID (ট্রানজেকশন আইডি) <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="text" 
-                                            id="transactionId" 
-                                            name="transactionId" 
-                                            value={formData.transactionId} 
-                                            onChange={handleChange} 
-                                            required={formData.paymentMethod === 'Online'} 
-                                            placeholder="e.g., 9K8G7F6H5J" 
-                                            className="w-full p-3 border border-stone-300 rounded-lg focus:ring-pink-600 focus:border-pink-600 transition text-base sm:text-sm bg-white text-black" 
-                                        />
-                                    </div>
-                                  </div>
-                            </div>
-                        )}
-                      </div>
-                    )}
-                </div>
-              </div>
-          )}
-          
-          {noPaymentMethodAvailable && (
-               <div className="p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200 mt-4">
-                   No payment methods are currently available. Please contact our support team for assistance.
-               </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={!isFormValid || isSubmitting} 
-            className={`w-full text-white text-lg font-bold px-6 py-3.5 rounded-full transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95 mt-6 ${isFormValid && !isSubmitting ? 'bg-pink-600 hover:bg-pink-700 cursor-pointer' : 'bg-pink-300 cursor-not-allowed'}`}
-          >
-            {isSubmitting ? (
-                <>
-                  <LoaderCircle className="w-5 h-5 animate-spin" />
-                  <span>Processing...</span>
-                </>
-             ) : (
-                <span>Place Order</span>
-             )}
-          </button>
-                {!isFormValid && (
-             <p className="text-red-500 text-xs text-center mt-2 font-medium animate-pulse">
-                Fill all required fields ( সব তথ্য পূরণ করুন )
-             </p>
-          )}
-        </form>
-
       </div>
     </main>
   );
 };
 
-export default CheckoutPage;
+export default CartPage;
