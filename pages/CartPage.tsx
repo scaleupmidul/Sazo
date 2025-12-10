@@ -605,6 +605,11 @@ const CheckoutPage: React.FC = () => {
                 <span>Place Order</span>
              )}
           </button>
+                {!isFormValid && (
+             <p className="text-red-500 text-xs text-center mt-2 font-medium animate-pulse">
+                Fill all required fields ( সব তথ্য পূরণ করুন )
+             </p>
+          )}
         </form>
 
       </div>
