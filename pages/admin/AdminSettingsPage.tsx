@@ -1,0 +1,834 @@
+import React, { useState, useEffect } from 'react';
+import { useAppStore } from '../../store';
+import { Save, LoaderCircle, Plus, Trash2, CheckCircle, Monitor, Smartphone } from 'lucide-react';
+import { SliderImageSetting, ShippingOption, SocialMediaLink, AppSettings } from '../../types';
+
+// Utility function to compress images client-side
+const compressImage = (file: File, options: { maxWidth: number; quality: number }): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(img.src); // Clean up blob URL
+            const { maxWidth, quality } = options;
+            let { width, height } = img;
+
+            // Calculate new dimensions while maintaining aspect ratio
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                const maxHeight = maxWidth; 
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject('Failed to get canvas context');
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const dataUrl = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', quality);
+            resolve(dataUrl);
+        };
+        img.onerror = (error) => reject(error);
+    });
+};
+
+interface ImageInputProps {
+    currentImage: string;
+    onImageChange: (value: string) => void;
+    options: { maxWidth: number; quality: number };
+}
+
+const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange, options }) => {
+    const { notify } = useAppStore();
+    const [inputType, setInputType] = useState<'upload' | 'url'>('upload');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 15 * 1024 * 1024) { // 15MB limit
+             notify('File is too large. Please select an image under 15MB.', 'error');
+             return;
+        }
+        
+        setIsProcessing(true);
+        try {
+            const compressedDataUrl = await compressImage(file, options);
+            onImageChange(compressedDataUrl);
+        } catch (error) {
+            console.error('Image compression failed:', error);
+            notify('Failed to process image. Please try a different one.', 'error');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+    
+    return (
+        <div className="flex-grow">
+            <div className="flex items-center mb-2">
+                <button type="button" onClick={() => setInputType('upload')} className={`px-3 py-1 text-xs rounded-l-md ${inputType === 'upload' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Upload File</button>
+                <button type="button" onClick={() => setInputType('url')} className={`px-3 py-1 text-xs rounded-r-md ${inputType === 'url' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Use Image URL</button>
+            </div>
+            {inputType === 'upload' ? (
+                <div className="flex items-center gap-2">
+                    <input 
+                        type="file" 
+                        onChange={handleFileSelect} 
+                        accept="image/*" 
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                    />
+                    {isProcessing && <LoaderCircle className="w-5 h-5 animate-spin text-pink-600 flex-shrink-0" />}
+                </div>
+            ) : (
+                <input 
+                    type="text"
+                    value={currentImage.startsWith('data:') ? '' : currentImage}
+                    onChange={(e) => onImageChange(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full p-2 border rounded bg-white text-black text-sm"
+                />
+            )}
+        </div>
+    );
+};
+
+
+// Tab Button Component
+const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => void }> = ({ label, isActive, onClick }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 text-sm font-medium ${
+            isActive
+                ? 'bg-pink-600 text-white shadow'
+                : 'text-gray-600 hover:bg-pink-100 hover:text-pink-700'
+        }`}
+    >
+        {label}
+    </button>
+);
+
+const AdminSettingsPage: React.FC = () => {
+    const { settings, updateSettings, notify } = useAppStore();
+    const [isSaving, setIsSaving] = useState(false);
+    const [isSaved, setIsSaved] = useState(false); // New state for success feedback
+    const [activeTab, setActiveTab] = useState('general');
+    
+    // State for Admin Credentials
+    const [adminEmail, setAdminEmail] = useState(settings.adminEmail || '');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [passwordChangeConfirm, setPasswordChangeConfirm] = useState('');
+
+    // State for Payment Settings
+    const [onlinePaymentInfo, setOnlinePaymentInfo] = useState(settings.onlinePaymentInfo || '');
+    const [onlinePaymentInfoStyles, setOnlinePaymentInfoStyles] = useState(settings.onlinePaymentInfoStyles || { fontSize: '0.875rem' });
+    const [codEnabled, setCodEnabled] = useState(settings.codEnabled ?? true);
+    const [onlinePaymentEnabled, setOnlinePaymentEnabled] = useState(settings.onlinePaymentEnabled ?? true);
+    const [onlinePaymentMethodsText, setOnlinePaymentMethodsText] = useState(settings.onlinePaymentMethods?.join(', ') || '');
+    
+    // State for Shipping Settings
+    const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>(settings.shippingOptions || []);
+
+    // State for Appearance Settings
+    const [sliderImages, setSliderImages] = useState<SliderImageSetting[]>(settings.sliderImages || []);
+    const [promoImage, setPromoImage] = useState(settings.productPagePromoImage || '');
+    const [homepageNewArrivalsCount, setHomepageNewArrivalsCount] = useState(settings.homepageNewArrivalsCount || 4);
+    const [homepageTrendingCount, setHomepageTrendingCount] = useState(settings.homepageTrendingCount || 4);
+    const [showSliderText, setShowSliderText] = useState(settings.showSliderText ?? true);
+
+    // State for Content Settings
+    const [footerDescription, setFooterDescription] = useState(settings.footerDescription || '');
+    const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>(settings.socialMediaLinks || []);
+    const [newSocialPlatform, setNewSocialPlatform] = useState('');
+    const [newSocialUrl, setNewSocialUrl] = useState('');
+    const [privacyPolicy, setPrivacyPolicy] = useState(settings.privacyPolicy || '');
+
+    // State for Contact Page
+    const [contactAddress, setContactAddress] = useState(settings.contactAddress || '');
+    const [contactPhone, setContactPhone] = useState(settings.contactPhone || '');
+    const [contactEmail, setContactEmail] = useState(settings.contactEmail || '');
+    const [whatsappNumber, setWhatsappNumber] = useState(settings.whatsappNumber || '');
+    const [showWhatsAppButton, setShowWhatsAppButton] = useState(settings.showWhatsAppButton ?? true);
+
+    // State for Cosmetics Hub Landing
+    const [cosHero, setCosHero] = useState(settings.cosmeticsHeroImage || '');
+    const [cosMobHero, setCosMobHero] = useState(settings.cosmeticsMobileHeroImage || '');
+    const [cosTitle, setCosTitle] = useState(settings.cosmeticsHeroTitle || '');
+    const [cosSub, setCosSub] = useState(settings.cosmeticsHeroSubtitle || '');
+    const [showCosHeroText, setShowCosHeroText] = useState(settings.showCosmeticsHeroText ?? true);
+
+    // State for Women's page
+    const [womenHero, setWomenHero] = useState(settings.womenHeroImage || '');
+    const [womenMobHero, setWomenMobHero] = useState(settings.womenMobileHeroImage || '');
+    const [womenTitle, setWomenTitle] = useState(settings.womenHeroTitle || '');
+    const [womenSub, setWomenSub] = useState(settings.womenHeroSubtitle || '');
+    const [showWomenHeroText, setShowWomenHeroText] = useState(settings.showWomenHeroText ?? true);
+
+    // Signature Collections Backgrounds
+    const [sigFashDesk, setSigFashDesk] = useState(settings.signatureFashionDesktopImage || '');
+    const [sigFashMob, setSigFashMob] = useState(settings.signatureFashionMobileImage || '');
+    const [sigCosDesk, setSigCosDesk] = useState(settings.signatureCosmeticsDesktopImage || '');
+    const [sigCosMob, setSigCosMob] = useState(settings.signatureCosmeticsMobileImage || '');
+
+    useEffect(() => {
+        setAdminEmail(settings.adminEmail || '');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setPasswordChangeConfirm('');
+        setOnlinePaymentInfo(settings.onlinePaymentInfo || '');
+        setOnlinePaymentInfoStyles(settings.onlinePaymentInfoStyles || { fontSize: '0.875rem' });
+        setCodEnabled(settings.codEnabled ?? true);
+        setOnlinePaymentEnabled(settings.onlinePaymentEnabled ?? true);
+        setOnlinePaymentMethodsText(settings.onlinePaymentMethods?.join(', ') || '');
+        setShippingOptions(settings.shippingOptions || []);
+        setSliderImages(settings.sliderImages || []);
+        setPromoImage(settings.productPagePromoImage || '');
+        setHomepageNewArrivalsCount(settings.homepageNewArrivalsCount || 4);
+        setHomepageTrendingCount(settings.homepageTrendingCount || 4);
+        setShowSliderText(settings.showSliderText ?? true);
+        setFooterDescription(settings.footerDescription || '');
+        setSocialMediaLinks(settings.socialMediaLinks || []);
+        setNewSocialPlatform('');
+        setNewSocialUrl('');
+        setPrivacyPolicy(settings.privacyPolicy || '');
+        setContactAddress(settings.contactAddress || '');
+        setContactPhone(settings.contactPhone || '');
+        setContactEmail(settings.contactEmail || '');
+        setWhatsappNumber(settings.whatsappNumber || '');
+        setShowWhatsAppButton(settings.showWhatsAppButton ?? true);
+
+        // Cosmetics Settings
+        setCosHero(settings.cosmeticsHeroImage || '');
+        setCosMobHero(settings.cosmeticsMobileHeroImage || '');
+        setCosTitle(settings.cosmeticsHeroTitle || '');
+        setCosSub(settings.cosmeticsHeroSubtitle || '');
+        setShowCosHeroText(settings.showCosmeticsHeroText ?? true);
+
+        // Women Settings
+        setWomenHero(settings.womenHeroImage || '');
+        setWomenMobHero(settings.womenMobileHeroImage || '');
+        setWomenTitle(settings.womenHeroTitle || '');
+        setWomenSub(settings.womenHeroSubtitle || '');
+        setShowWomenHeroText(settings.showWomenHeroText ?? true);
+
+        // Signature Images
+        setSigFashDesk(settings.signatureFashionDesktopImage || '');
+        setSigFashMob(settings.signatureFashionMobileImage || '');
+        setSigCosDesk(settings.signatureCosmeticsDesktopImage || '');
+        setSigCosMob(settings.signatureCosmeticsMobileImage || '');
+    }, [settings]);
+
+    // --- Helper Functions for Settings Management ---
+
+    // Shipping Options Handlers
+    const handleShippingOptionChange = (id: string, field: keyof ShippingOption, value: any) => {
+        setShippingOptions(prev => prev.map(opt => opt.id === id ? { ...opt, [field]: value } : opt));
+    };
+
+    const addShippingOption = () => {
+        const newOption: ShippingOption = { id: Date.now().toString(), label: '', charge: 0 };
+        setShippingOptions(prev => [...prev, newOption]);
+    };
+
+    const removeShippingOption = (id: string) => {
+        setShippingOptions(prev => prev.filter(opt => opt.id !== id));
+    };
+
+    // Slider Images Handlers
+    const handleSliderChange = (index: number, field: keyof SliderImageSetting, value: any) => {
+        setSliderImages(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+        });
+    };
+
+    const addSlider = () => {
+        const newSlider: SliderImageSetting = {
+            id: Date.now(),
+            title: '',
+            subtitle: '',
+            color: '',
+            image: 'https://picsum.photos/seed/sazo-new/1200/500',
+            mobileImage: 'https://picsum.photos/seed/sazo-new-mobile/400/500'
+        };
+        setSliderImages(prev => [...prev, newSlider]);
+    };
+
+    const removeSlider = (id: number) => {
+        setSliderImages(prev => prev.filter(s => s.id !== id));
+    };
+
+    // Social Media Handlers
+    const handleSocialMediaLinkChange = (index: number, field: keyof SocialMediaLink, value: string) => {
+        setSocialMediaLinks(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+        });
+    };
+
+    const addSocialMediaLink = () => {
+        if (!newSocialPlatform || !newSocialUrl) return;
+        setSocialMediaLinks(prev => [...prev, { platform: newSocialPlatform, url: newSocialUrl }]);
+        setNewSocialPlatform('');
+        setNewSocialUrl('');
+    };
+
+    const removeSocialMediaLink = (index: number) => {
+        setSocialMediaLinks(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSave = async () => {
+        if (newPassword && newPassword !== confirmNewPassword) {
+            notify("New passwords do not match.", "error");
+            return;
+        }
+
+        if (newPassword && passwordChangeConfirm !== 'CONFIRM') {
+            notify('To confirm, please type "CONFIRM" in the confirmation box.', "error");
+            return;
+        }
+
+        setIsSaving(true);
+        setIsSaved(false);
+
+        try {
+            const settingsToUpdate: Partial<AppSettings> = {
+                adminEmail,
+                contactAddress,
+                contactPhone,
+                contactEmail,
+                whatsappNumber,
+                showWhatsAppButton,
+                onlinePaymentInfo,
+                onlinePaymentInfoStyles,
+                codEnabled,
+                onlinePaymentEnabled,
+                onlinePaymentMethods: onlinePaymentMethodsText.split(',').map(m => m.trim()).filter(Boolean),
+                shippingOptions,
+                sliderImages,
+                productPagePromoImage: promoImage,
+                homepageNewArrivalsCount,
+                homepageTrendingCount,
+                showSliderText,
+                footerDescription,
+                socialMediaLinks,
+                privacyPolicy,
+                // Cosmetics Landing Settings
+                cosmeticsHeroImage: cosHero,
+                cosmeticsMobileHeroImage: cosMobHero,
+                cosmeticsHeroTitle: cosTitle,
+                cosmeticsHeroSubtitle: cosSub,
+                showCosmeticsHeroText: showCosHeroText,
+                // Women Landing Settings
+                womenHeroImage: womenHero,
+                womenMobileHeroImage: womenMobHero,
+                womenHeroTitle: womenTitle,
+                womenHeroSubtitle: womenSub,
+                showWomenHeroText: showWomenHeroText,
+                // Explicitly disable promo features as they are removed from UI
+                showCosmeticsPromo: false,
+                // Signature Collection Images
+                signatureFashionDesktopImage: sigFashDesk,
+                signatureFashionMobileImage: sigFashMob,
+                signatureCosmeticsDesktopImage: sigCosDesk,
+                signatureCosmeticsMobileImage: sigCosMob
+            };
+    
+            if (newPassword) {
+                settingsToUpdate.adminPassword = newPassword;
+            }
+        
+            await updateSettings(settingsToUpdate);
+            
+            setNewPassword('');
+            setConfirmNewPassword('');
+            setPasswordChangeConfirm('');
+            
+            setIsSaved(true);
+            setTimeout(() => {
+                setIsSaved(false);
+            }, 2000);
+
+        } catch (error) {
+            console.error("Failed to save settings from AdminSettingsPage", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'general': return (
+                <>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Admin Credentials</h2>
+                        <div className="space-y-6">
+                            <div>
+                                <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
+                                <input type="email" id="adminEmail" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" />
+                                <p className="text-xs text-gray-500 mt-1">The email used to log into the admin panel.</p>
+                            </div>
+                            <div>
+                                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" autoComplete="new-password" />
+                                <p className="text-xs text-gray-500 mt-1">Leave blank to keep the current password.</p>
+                            </div>
+                            <div>
+                                <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                                <input type="password" id="confirmNewPassword" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" autoComplete="new-password"/>
+                            </div>
+                            {newPassword && (
+                                <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+                                    <label htmlFor="passwordChangeConfirm" className="block text-sm font-bold text-yellow-800 mb-2">
+                                        Confirm Password Change
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="passwordChangeConfirm"
+                                        value={passwordChangeConfirm}
+                                        onChange={(e) => setPasswordChangeConfirm(e.target.value)}
+                                        className="w-full p-3 border border-yellow-400 rounded-lg text-sm bg-white text-black focus:ring-yellow-500 focus:border-yellow-500"
+                                        placeholder='Type "CONFIRM" here'
+                                    />
+                                    <p className="text-xs text-yellow-700 mt-1">This is required to prevent accidental changes.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Contact Page & Checkout</h2>
+                        <div className="space-y-6">
+                            <div>
+                                <label htmlFor="contactAddress" className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                                <input type="text" id="contactAddress" value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" />
+                            </div>
+                            <div>
+                                <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                                <input type="text" id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" />
+                            </div>
+                            <div>
+                                <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                <input type="email" id="contactEmail" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" />
+                            </div>
+                             <div>
+                                <label htmlFor="whatsappNumber" className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label>
+                                <input type="text" id="whatsappNumber" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" placeholder="+8801..." />
+                                <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +880). This will enable the floating chat button.</p>
+                            </div>
+                             <div className="p-4 bg-gray-50 rounded-lg border">
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <span className="font-medium text-sm text-gray-800">Show Floating Chat Button</span>
+                                    <div className="relative">
+                                        <input type="checkbox" className="sr-only peer" checked={showWhatsAppButton} onChange={(e) => setShowWhatsAppButton(e.target.checked)} />
+                                        <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                    </div>
+                                </label>
+                                 <p className="text-xs text-gray-500 mt-1">If enabled, a floating message button will appear on the website.</p>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
+            case 'payments': return (
+                <>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Payment Settings</h2>
+                        <div className="space-y-6">
+                            <div>
+                                <label htmlFor="onlinePaymentInfo" className="block text-sm font-medium text-gray-700 mb-2">Online Payment Information</label>
+                                <textarea id="onlinePaymentInfo" value={onlinePaymentInfo} onChange={(e) => setOnlinePaymentInfo(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black h-24" rows={3}/>
+                                <p className="text-xs text-gray-500 mt-1">Displayed on the checkout page. Use line breaks for new lines and HTML tags like `&lt;b&gt;` for bold text.</p>
+                                <div className="flex flex-col sm:flex-row gap-4 mt-4 pt-4 border-t">
+                                    <div className="flex-1">
+                                        <label htmlFor="onlinePaymentInfoFontSize" className="block text-xs font-medium text-gray-700 mb-1">Font Size</label>
+                                        <input 
+                                            type="text" 
+                                            id="onlinePaymentInfoFontSize" 
+                                            value={onlinePaymentInfoStyles.fontSize} 
+                                            onChange={(e) => setOnlinePaymentInfoStyles(s => ({ ...s, fontSize: e.target.value }))} 
+                                            className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white text-black"
+                                            placeholder="e.g., 0.875rem or 14px"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="block text-sm font-medium text-gray-700 mb-2">Payment Method Availability</h3>
+                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                                    <label className="flex items-center"><input type="checkbox" checked={codEnabled} onChange={(e) => setCodEnabled(e.target.checked)} className="h-5 w-5 text-pink-600 rounded" /><span className="ml-3 text-sm text-black">Enable COD</span></label>
+                                    <label className="flex items-center"><input type="checkbox" checked={onlinePaymentEnabled} onChange={(e) => setOnlinePaymentEnabled(e.target.checked)} className="h-5 w-5 text-pink-600 rounded" /><span className="ml-3 text-sm text-black">Enable Online Payment (Bkash/Nagad)</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="onlinePaymentMethods" className="block text-sm font-medium text-gray-700 mb-2">Online Payment Options</label>
+                                <input type="text" id="onlinePaymentMethods" value={onlinePaymentMethodsText} onChange={(e) => setOnlinePaymentMethodsText(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" placeholder="e.g., Bkash, Nagad, UPAY" />
+                                <p className="text-xs text-gray-500 mt-1">Comma-separated list for the checkout dropdown.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Shipping Settings</h2>
+                        <div className="space-y-4">
+                            {shippingOptions.map((option) => (
+                                <div key={option.id} className="p-4 bg-gray-50 rounded-lg border flex flex-col md:flex-row items-center gap-4 relative">
+                                    <div className="flex-1 w-full">
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">Label</label>
+                                        <input type="text" value={option.label} onChange={(e) => handleShippingOptionChange(option.id, 'label', e.target.value)} className="w-full p-2 border rounded bg-white text-black" placeholder="e.g., Inside Dhaka" />
+                                    </div>
+                                    <div className="w-full md:w-40">
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">Charge (৳)</label>
+                                        <input type="number" value={option.charge} onChange={(e) => handleShippingOptionChange(option.id, 'charge', Number(e.target.value))} className="w-full p-2 border rounded bg-white text-black" placeholder="e.g., 80" />
+                                    </div>
+                                    <button type="button" onClick={() => removeShippingOption(option.id)} className="md:absolute top-2 right-2 p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                            ))}
+                        </div>
+                        <button type="button" onClick={addShippingOption} className="mt-4 bg-blue-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-600 flex items-center space-x-2"><Plus className="w-4 h-4" /><span>Add Shipping Option</span></button>
+                    </div>
+                </>
+            );
+            case 'appearance': return (
+                <>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Homepage Layout Control</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div>
+                                <label htmlFor="homepageNewArrivalsCount" className="block text-sm font-medium text-gray-700 mb-2">New Arrivals Limit</label>
+                                <input type="number" id="homepageNewArrivalsCount" value={homepageNewArrivalsCount} onChange={(e) => setHomepageNewArrivalsCount(Number(e.target.value))} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" min="0" />
+                                <p className="text-xs text-gray-500 mt-1">Number of items to show in the "New Arrivals" section.</p>
+                            </div>
+                             <div>
+                                <label htmlFor="homepageTrendingCount" className="block text-sm font-medium text-gray-700 mb-2">Trending Products Limit</label>
+                                <input type="number" id="homepageTrendingCount" value={homepageTrendingCount} onChange={(e) => setHomepageTrendingCount(Number(e.target.value))} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black" min="0" />
+                                <p className="text-xs text-gray-500 mt-1">Number of items to show in the "Trending Products" section.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Slider Content Visibility</h2>
+                        <div className="p-4 bg-gray-50 rounded-lg border">
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <span className="font-medium text-sm text-gray-800">Show Text & Button on Slider</span>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={showSliderText} onChange={(e) => setShowSliderText(e.target.checked)} />
+                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                </div>
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">If disabled, the slider will only show images without titles, subtitles, or buttons.</p>
+                        </div>
+                    </div>
+
+                    {/* Signature Collections Management */}
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Signature Collections Banners</h2>
+                        <p className="text-xs text-gray-500 mb-6 italic">Upload custom background images for the two main spotlight boxes on the homepage.</p>
+                        
+                        <div className="space-y-8">
+                            {/* Fashion Studio Images */}
+                            <div className="p-4 bg-gray-50 rounded-xl border border-stone-200">
+                                <h3 className="font-bold text-stone-700 text-sm mb-4 uppercase tracking-wider">The Fashion Studio</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-stone-500 uppercase"><Monitor className="w-3 h-3"/> Desktop Image</label>
+                                        <div className="flex items-center gap-4">
+                                            {sigFashDesk && <img src={sigFashDesk} className="w-20 h-14 object-cover rounded border" />}
+                                            <ImageInput currentImage={sigFashDesk} onImageChange={setSigFashDesk} options={{maxWidth: 1200, quality: 0.8}} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-stone-500 uppercase"><Smartphone className="w-3 h-3"/> Mobile Image</label>
+                                        <div className="flex items-center gap-4">
+                                            {sigFashMob && <img src={sigFashMob} className="w-12 h-16 object-cover rounded border" />}
+                                            <ImageInput currentImage={sigFashMob} onImageChange={setSigFashMob} options={{maxWidth: 600, quality: 0.8}} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Beauty Rituals Images */}
+                            <div className="p-4 bg-gray-50 rounded-xl border border-stone-200">
+                                <h3 className="font-bold text-stone-700 text-sm mb-4 uppercase tracking-wider">The Beauty Rituals</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-stone-500 uppercase"><Monitor className="w-3 h-3"/> Desktop Image</label>
+                                        <div className="flex items-center gap-4">
+                                            {sigCosDesk && <img src={sigCosDesk} className="w-20 h-14 object-cover rounded border" />}
+                                            <ImageInput currentImage={sigCosDesk} onImageChange={setSigCosDesk} options={{maxWidth: 1200, quality: 0.8}} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-stone-500 uppercase"><Smartphone className="w-3 h-3"/> Mobile Image</label>
+                                        <div className="flex items-center gap-4">
+                                            {sigCosMob && <img src={sigCosMob} className="w-12 h-16 object-cover rounded border" />}
+                                            <ImageInput currentImage={sigCosMob} onImageChange={setSigCosMob} options={{maxWidth: 600, quality: 0.8}} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Homepage Slider</h2>
+                        <div className="space-y-4">
+                            {sliderImages.map((slider, index) => (
+                                <div key={slider.id} className="p-4 bg-gray-50 rounded-lg border space-y-3 relative">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input value={slider.title} onChange={(e) => handleSliderChange(index, 'title', e.target.value)} placeholder="Title" className="p-2 border rounded w-full bg-white text-black" />
+                                        <input value={slider.subtitle} onChange={(e) => handleSliderChange(index, 'subtitle', e.target.value)} placeholder="Subtitle" className="p-2 border rounded w-full bg-white text-black" />
+                                        <input value={slider.color} onChange={(e) => handleSliderChange(index, 'color', e.target.value)} placeholder="Color Class (e.g., text-pink-600)" className="p-2 border rounded w-full bg-white text-black" />
+                                    </div>
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 border-t pt-4 mt-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Desktop Image</label>
+                                            <div className="flex items-center gap-4">
+                                                <img src={slider.image} alt="Slider" className="w-24 h-12 object-cover rounded-lg flex-shrink-0"/>
+                                                <ImageInput 
+                                                    currentImage={slider.image}
+                                                    onImageChange={(val) => handleSliderChange(index, 'image', val)}
+                                                    options={{ maxWidth: 1280, quality: 0.75 }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Image</label>
+                                            <div className="flex items-center gap-4">
+                                                <img src={slider.mobileImage} alt="Mobile Slider" className="w-12 h-16 object-cover rounded-lg flex-shrink-0"/>
+                                                <ImageInput 
+                                                    currentImage={slider.mobileImage || ''}
+                                                    onImageChange={(val) => handleSliderChange(index, 'mobileImage', val)}
+                                                    options={{ maxWidth: 640, quality: 0.75 }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => removeSlider(slider.id)} className="absolute top-2 right-2 p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                            ))}
+                        </div>
+                        <button type="button" onClick={addSlider} className="mt-4 bg-blue-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-600 flex items-center space-x-2"><Plus className="w-4 h-4" /><span>Add Slide</span></button>
+                    </div>
+                     <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Product Page Promo Banner</h2>
+                        <div className="p-4 bg-gray-50 rounded-lg border">
+                             <div className="flex items-center gap-4">
+                                <img src={promoImage} alt="Promo banner" className="w-32 h-16 object-cover rounded-lg flex-shrink-0"/>
+                                <ImageInput 
+                                    currentImage={promoImage}
+                                    onImageChange={(val) => setPromoImage(val)}
+                                    options={{ maxWidth: 1024, quality: 0.75 }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
+            case 'content': return (
+                <>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Footer Description</h2>
+                        <textarea
+                            value={footerDescription}
+                            onChange={(e) => setFooterDescription(e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black h-24"
+                            rows={4}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">This text appears in the footer of your website.</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Social Media Links</h2>
+                        <div className="space-y-4">
+                            {socialMediaLinks.map((link, index) => (
+                                <div key={index} className="p-4 bg-gray-50 rounded-lg border flex flex-col md:flex-row items-center gap-4 relative">
+                                    <div className="w-full md:w-40">
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">Platform</label>
+                                        <input type="text" value={link.platform} onChange={(e) => handleSocialMediaLinkChange(index, 'platform', e.target.value)} className="w-full p-2 border rounded bg-white text-black" placeholder="e.g., Facebook"/>
+                                    </div>
+                                    <div className="flex-1 w-full">
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">URL</label>
+                                        <input type="url" value={link.url} onChange={(e) => handleSocialMediaLinkChange(index, 'url', e.target.value)} className="w-full p-2 border rounded bg-white text-black" placeholder="https://..."/>
+                                    </div>
+                                    <button type="button" onClick={() => removeSocialMediaLink(index)} className="md:absolute top-2 right-2 p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 border-t pt-4">
+                            <h3 className="text-md font-semibold text-gray-700 mb-3">Add New Social Link</h3>
+                            <div className="flex flex-col md:flex-row gap-2 items-end">
+                                <div className="flex-1 w-full">
+                                    <label className="text-xs font-medium text-gray-700 block mb-1">Platform Name</label>
+                                    <input value={newSocialPlatform} onChange={(e) => setNewSocialPlatform(e.target.value)} placeholder="e.g., YouTube" className="w-full p-2 border rounded bg-white text-black"/>
+                                </div>
+                                <div className="flex-1 w-full">
+                                    <label className="text-xs font-medium text-gray-700 block mb-1">Full URL</label>
+                                    <input value={newSocialUrl} onChange={(e) => setNewSocialUrl(e.target.value)} placeholder="https://..." className="w-full p-2 border rounded bg-white text-black" />
+                                </div>
+                                <button type="button" onClick={addSocialMediaLink} className="bg-blue-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-600 flex items-center space-x-2 w-full md:w-auto mt-2 md:mt-0"><Plus className="w-4 h-4" /><span>Add Link</span></button>
+                            </div>
+                        </div>
+                    </div>
+                     <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Privacy Policy Page</h2>
+                        <textarea value={privacyPolicy} onChange={(e) => setPrivacyPolicy(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white text-black h-64" />
+                        <p className="text-xs text-gray-500 mt-1">This content will be displayed on the Privacy Policy page.</p>
+                    </div>
+                </>
+            );
+            case 'cosmetics': return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hero Section Content Visibility</h2>
+                        <div className="p-4 bg-gray-50 rounded-lg border">
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <span className="font-medium text-sm text-gray-800">Show Text & Button on Hero Section</span>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={showCosHeroText} onChange={(e) => setShowCosHeroText(e.target.checked)} />
+                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                </div>
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">If disabled, the hero section will only show the background image without titles, subtitles, or buttons.</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hero Section Content</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Headline</label>
+                                <input value={cosTitle} onChange={e => setCosTitle(e.target.value)} placeholder="e.g. Nurturing Natural Glow" className="w-full p-3 border rounded-lg bg-white text-black font-bold" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sub-headline</label>
+                                <textarea value={cosSub} onChange={e => setCosSub(e.target.value)} placeholder="Brief description..." className="w-full p-3 border rounded-lg h-20 bg-white text-black" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-stone-400 uppercase tracking-widest"><Monitor className="w-3 h-3"/> Desktop Hero Image</label>
+                                    <ImageInput currentImage={cosHero} onImageChange={setCosHero} options={{maxWidth: 1920, quality: 0.8}} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-stone-400 uppercase tracking-widest"><Smartphone className="w-3 h-3"/> Mobile Hero Image</label>
+                                    <ImageInput currentImage={cosMobHero} onImageChange={setCosMobHero} options={{maxWidth: 800, quality: 0.8}} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+            case 'women': return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hero Section Content Visibility</h2>
+                        <div className="p-4 bg-gray-50 rounded-lg border">
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <span className="font-medium text-sm text-gray-800">Show Text & Button on Hero Section</span>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={showWomenHeroText} onChange={(e) => setShowWomenHeroText(e.target.checked)} />
+                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                </div>
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">If disabled, the hero section will only show the background image without titles, subtitles, or buttons.</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Hero Section Content</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Headline</label>
+                                <input value={womenTitle} onChange={e => setWomenTitle(e.target.value)} placeholder="e.g. Elegance In Every Thread" className="w-full p-3 border rounded-lg bg-white text-black font-bold" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sub-headline</label>
+                                <textarea value={womenSub} onChange={e => setWomenSub(e.target.value)} placeholder="Brief description..." className="w-full p-3 border rounded-lg h-20 bg-white text-black" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-stone-400 uppercase tracking-widest"><Monitor className="w-3 h-3"/> Desktop Hero Image</label>
+                                    <ImageInput currentImage={womenHero} onImageChange={setWomenHero} options={{maxWidth: 1920, quality: 0.8}} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-stone-400 uppercase tracking-widest"><Smartphone className="w-3 h-3"/> Mobile Hero Image</label>
+                                    <ImageInput currentImage={womenMobHero} onImageChange={setWomenMobHero} options={{maxWidth: 800, quality: 0.8}} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+            default: return null;
+        }
+    };
+
+    return (
+        <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-6">Settings</h1>
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+                <aside className="w-full md:w-1/4 md:sticky top-6">
+                    <div className="bg-white p-2 rounded-lg shadow-md space-y-1">
+                        <TabButton label="General" isActive={activeTab === 'general'} onClick={() => setActiveTab('general')} />
+                        <TabButton label="Payments & Shipping" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+                        <TabButton label="Appearance" isActive={activeTab === 'appearance'} onClick={() => setActiveTab('appearance')} />
+                        <TabButton label="Cosmetics" isActive={activeTab === 'cosmetics'} onClick={() => setActiveTab('cosmetics')} />
+                        <TabButton label="Women" isActive={activeTab === 'women'} onClick={() => setActiveTab('women')} />
+                        <TabButton label="Content" isActive={activeTab === 'content'} onClick={() => setActiveTab('content')} />
+                    </div>
+                </aside>
+                <main className="w-full md:w-3/4 pb-24">
+                    <div className="space-y-8 animate-fadeIn" key={activeTab}>
+                        {renderTabContent()}
+                    </div>
+                </main>
+            </div>
+            
+            <div className="fixed bottom-6 right-6 z-50">
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving || isSaved}
+                    className={`
+                        px-10 py-4 rounded-full shadow-2xl transition-all duration-300 flex items-center space-x-3
+                        ${isSaved 
+                            ? 'bg-green-600 hover:bg-green-700 text-white scale-105' 
+                            : 'bg-pink-600 hover:bg-pink-700 text-white'
+                        }
+                        disabled:opacity-70 disabled:cursor-not-allowed
+                    `}
+                >
+                    {isSaving ? (
+                        <>
+                            <LoaderCircle className="w-6 h-6 animate-spin" />
+                            <span className="font-bold">Saving Changes...</span>
+                        </>
+                    ) : isSaved ? (
+                        <>
+                            <CheckCircle className="w-6 h-6 animate-bounce" />
+                            <span className="font-bold">Saved Successfully!</span>
+                        </>
+                    ) : (
+                        <>
+                            <Save className="w-6 h-6" />
+                            <span className="font-bold">Save All Settings</span>
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default AdminSettingsPage;
