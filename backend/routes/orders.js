@@ -36,7 +36,7 @@ const sendOrderEmailToAdmin = async (order) => {
   const mailOptions = {
     from: `"SAZO | Order Desk" <${systemEmail}>`,
     to: systemEmail,
-    subject: `🚨 New Order #${order.orderId}`,
+    subject: `🎉🎉🎉 New Order #${order.orderId}`,
     priority: 'high',
     html: `<div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
       <div style="background: #db2777; padding: 20px; color: white; text-align: center;">
