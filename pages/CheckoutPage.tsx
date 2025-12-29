@@ -16,7 +16,7 @@ const BANGLADESH_DISTRICTS = [
   "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon"
 ].sort();
 
-// Improved InputField with premium styling - Added error highlighting
+// Improved InputField with strictly white background and autofill fix
 const InputField: React.FC<{ 
     label: string; 
     name: string; 
@@ -26,7 +26,6 @@ const InputField: React.FC<{
     required?: boolean; 
     error?: boolean;
 }> = ({ label, name, type = 'text', value, onChange, required = true, error }) => {
-    const hasValue = value && value.trim().length > 0;
     return (
         <div className="space-y-1.5">
           <label htmlFor={name} className="text-xs font-bold text-stone-600 uppercase tracking-wider ml-1">
@@ -39,9 +38,11 @@ const InputField: React.FC<{
             value={value || ''} 
             onChange={onChange} 
             required={required} 
-            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out 
+            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out bg-white
               ${error ? 'border-red-500 ring-4 ring-red-100' : 'border-stone-200 focus:ring-pink-500/10 focus:border-pink-500'} 
-              ${hasValue ? 'bg-white' : 'bg-stone-50'} focus:bg-white text-stone-800 text-sm shadow-sm hover:border-stone-300 hover:bg-white`} 
+              text-stone-800 text-sm shadow-sm hover:border-stone-300
+              [&:-webkit-autofill]:shadow-[0_0_0_1000px_white_inset] 
+              [&:-webkit-autofill]:text-stone-800`} 
           />
         </div>
     );
@@ -366,9 +367,9 @@ const CheckoutPage: React.FC = () => {
                         value={formData.city} 
                         onChange={handleChange} 
                         required 
-                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out 
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out bg-white
                           ${isAttempted && !formData.city ? 'border-red-500 ring-4 ring-red-100' : 'border-stone-200 focus:ring-pink-500/10 focus:border-pink-500'} 
-                          ${formData.city ? 'bg-white' : 'bg-stone-50'} focus:bg-white text-stone-800 text-sm shadow-sm appearance-none cursor-pointer hover:border-stone-300`}
+                          text-stone-800 text-sm shadow-sm appearance-none cursor-pointer hover:border-stone-300`}
                       >
                         <option value="" disabled>Choose District</option>
                         {BANGLADESH_DISTRICTS.map(dist => (
@@ -383,16 +384,18 @@ const CheckoutPage: React.FC = () => {
                 <label htmlFor="address" className="text-xs font-bold text-stone-600 uppercase tracking-wider ml-1">
                     Delivery Address (ডেলিভারি ঠিকানা) <span className="text-red-500">*</span>
                 </label>
-                <textarea id="address" name="address" value={formData.address} onChange={handleChange} required rows={3} placeholder="Road, Area, Thana & District" className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out 
+                <textarea id="address" name="address" value={formData.address} onChange={handleChange} required rows={3} placeholder="Road, Area, Thana & District" 
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 ease-out bg-white
                   ${isAttempted && !formData.address.trim() ? 'border-red-500 ring-4 ring-red-100' : 'border-stone-200 focus:ring-pink-500/10 focus:border-pink-500'} 
-                  ${formData.address.trim() ? 'bg-white' : 'bg-stone-50'} focus:bg-white text-stone-800 text-sm shadow-sm hover:border-stone-300 resize-none`} />
+                  text-stone-800 text-sm shadow-sm hover:border-stone-300 resize-none
+                  [&:-webkit-autofill]:shadow-[0_0_0_1000px_white_inset]`} />
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="note" className="text-xs font-bold text-stone-600 uppercase tracking-wider ml-1">
                     COMMENT (মন্তব্য - OPTIONAL)
                 </label>
-                <textarea id="note" name="note" value={formData.note} onChange={handleChange} rows={3} className={`w-full px-4 py-3 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all duration-300 ease-out bg-stone-50 focus:bg-white text-stone-800 text-sm shadow-sm hover:border-stone-300 resize-none`} />
+                <textarea id="note" name="note" value={formData.note} onChange={handleChange} rows={3} className={`w-full px-4 py-3 border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all duration-300 ease-out bg-white text-stone-800 text-sm shadow-sm hover:border-stone-300 resize-none`} />
               </div>
             </div>
           </div>
@@ -439,9 +442,9 @@ const CheckoutPage: React.FC = () => {
                                     <div className="space-y-1.5">
                                         <label htmlFor="onlinePaymentMethod" className="text-xs font-bold text-stone-600 uppercase tracking-wider ml-1">Payment Method (পেমেন্ট পদ্ধতি) <span className="text-red-500">*</span></label>
                                         <select id="onlinePaymentMethod" name="onlinePaymentMethod" value={formData.onlinePaymentMethod} onChange={handleChange} required 
-                                          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 
+                                          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-4 transition-all duration-300 bg-white
                                             ${isAttempted && formData.onlinePaymentMethod === 'Choose' ? 'border-red-500 ring-4 ring-red-100' : 'border-stone-200 focus:ring-pink-500/10 focus:border-pink-500'} 
-                                            ${formData.onlinePaymentMethod !== 'Choose' ? 'bg-white' : 'bg-stone-50'} focus:bg-white text-stone-800 text-sm`}
+                                            text-stone-800 text-sm shadow-sm appearance-none cursor-pointer hover:border-stone-300`}
                                         >
                                             <option value="Choose" disabled>Choose</option>
                                             {safeOnlinePaymentMethods.map(method => <option key={method} value={method}>{method}</option>)}
