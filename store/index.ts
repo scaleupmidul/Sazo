@@ -45,9 +45,6 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 const MOCK_PRODUCTS_DATA: Product[] = [];
 
-// Extending AppState interface conceptually - note that in a real project we'd update types.ts
-// But here we implement it directly in the store logic.
-
 export const useAppStore = create<any>()(
   persist(
     (set, get) => ({
@@ -81,23 +78,23 @@ export const useAppStore = create<any>()(
 
         loadInitialData: async () => {
             try {
+                // Fetch home data (settings + featured products)
                 const homeDataRes = await fetch(`${API_URL}/page-data/home`);
                 if (!homeDataRes.ok) throw new Error('Failed to fetch initial page data.');
                 const homeData = await homeDataRes.json();
                 
-                let finalProducts: Product[] = [];
-                if (homeData.products && homeData.products.length > 0) {
-                    finalProducts = homeData.products;
-                } else {
-                    finalProducts = MOCK_PRODUCTS_DATA;
-                }
-
                 set({
-                    products: finalProducts,
+                    products: homeData.products || MOCK_PRODUCTS_DATA,
                     settings: homeData.settings || DEFAULT_SETTINGS,
-                    fullProductsLoaded: false,
                     loading: false
                 });
+
+                // Background load ALL products for shop page after a very short break
+                // This ensures LCP is handled first
+                requestAnimationFrame(() => {
+                    get().ensureAllProductsLoaded();
+                });
+                
             } catch (error) {
                 set({ 
                     products: MOCK_PRODUCTS_DATA, 
@@ -105,10 +102,6 @@ export const useAppStore = create<any>()(
                     loading: false,
                     fullProductsLoaded: true 
                 });
-            } finally {
-                setTimeout(() => {
-                    get().ensureAllProductsLoaded();
-                }, 3000);
             }
         },
 
@@ -149,12 +142,16 @@ export const useAppStore = create<any>()(
                 const res = await fetch(`${API_URL}/products`);
                 if (!res.ok) throw new Error('Failed to fetch all products');
                 let allProducts: Product[] = await res.json();
-                if (!allProducts || allProducts.length === 0) allProducts = MOCK_PRODUCTS_DATA;
+                
+                // Merge products to avoid duplicates but fill missing ones
                 const productMap = new Map<string, Product>();
                 existingProducts.forEach(p => productMap.set(p.id, p));
                 allProducts.forEach(p => productMap.set(p.id, p));
-                const mergedProducts = Array.from(productMap.values());
-                set({ products: mergedProducts, fullProductsLoaded: true });
+                
+                set({ 
+                    products: Array.from(productMap.values()), 
+                    fullProductsLoaded: true 
+                });
             } catch (error) {
                 console.error("Failed to load all products", error);
             }
@@ -185,7 +182,7 @@ export const useAppStore = create<any>()(
                 if (!res.ok) return;
                 const freshProduct = await res.json();
                 set(state => {
-                    const isMatch = (p: Product) => p.id === freshProduct.id || p.productId === freshProduct.productId || String(p.id) === String(freshProduct.productId) || String(p.productId) === String(freshProduct.id);
+                    const isMatch = (p: Product) => p.id === freshProduct.id || p.productId === freshProduct.productId;
                     const updatedProducts = state.products.map(p => isMatch(p) ? freshProduct : p);
                     let newSelected = state.selectedProduct;
                     if (!newSelected || isMatch(newSelected)) newSelected = freshProduct;
@@ -405,11 +402,10 @@ export const useAppStore = create<any>()(
         if (!persistedState || typeof persistedState !== 'object') return currentState;
         let safeCart: CartItem[] = [];
         if (Array.isArray(persistedState.cart)) {
-            safeCart = persistedState.cart.filter((item: any) => item && typeof item === 'object' && typeof item.id === 'string' && typeof item.price === 'number' && !isNaN(item.price) && typeof item.quantity === 'number' && !isNaN(item.quantity));
+            safeCart = persistedState.cart.filter((item: any) => item && typeof item === 'object');
         }
         const merged = { ...currentState, ...persistedState, cart: safeCart };
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
-        if (!merged.products || merged.products.length === 0) merged.products = MOCK_PRODUCTS_DATA;
         return merged;
       },
     }
