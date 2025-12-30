@@ -16,6 +16,20 @@ import {
 
 const PRODUCTS_PER_PAGE = 12;
 
+const HeroSkeleton = () => (
+    <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full h-full flex items-center">
+            <div className="max-w-xl space-y-4">
+                <div className="h-4 bg-stone-300 rounded w-24"></div>
+                <div className="h-12 bg-stone-300 rounded w-3/4"></div>
+                <div className="h-6 bg-stone-300 rounded w-1/2"></div>
+                <div className="h-12 bg-stone-300 rounded-full w-40 pt-4"></div>
+            </div>
+        </div>
+    </section>
+);
+
 const ProductCardSkeleton: React.FC = () => (
     <div className="bg-white rounded-lg border border-stone-200 overflow-hidden shadow-lg w-full h-full flex flex-col">
       <div className="aspect-[3/4] bg-stone-200 w-full animate-pulse relative" />
@@ -106,43 +120,47 @@ const CosmeticsPage: React.FC = () => {
 
     return (
         <div className="bg-[#FFF9F9] min-h-screen relative">
-            {/* --- LUXURY HERO --- */}
-            <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] flex items-center overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                    <picture>
-                        <source media="(max-width: 640px)" srcSet={settings.cosmeticsMobileHeroImage} />
-                        <img 
-                            src={settings.cosmeticsHeroImage} 
-                            alt="Cosmetics Hero" 
-                            className="w-full h-full object-cover brightness-95"
-                        />
-                    </picture>
-                    <div className="absolute inset-0 bg-gradient-to-r from-pink-50/90 via-white/20 to-transparent"></div>
-                </div>
+            
+            {loading ? (
+                <HeroSkeleton />
+            ) : (
+                <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] flex items-center overflow-hidden">
+                    <div className="absolute inset-0 z-0">
+                        <picture>
+                            <source media="(max-width: 640px)" srcSet={settings.cosmeticsMobileHeroImage} />
+                            <img 
+                                src={settings.cosmeticsHeroImage} 
+                                alt="Cosmetics Hero" 
+                                className="w-full h-full object-cover brightness-95"
+                            />
+                        </picture>
+                        <div className="absolute inset-0 bg-gradient-to-r from-pink-50/90 via-white/20 to-transparent"></div>
+                    </div>
 
-                {settings.showCosmeticsHeroText && (
-                    <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full">
-                        <div className="max-w-xl animate-fadeInUp space-y-2 sm:space-y-4">
-                            <span className="text-pink-600 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1 block">The Cosmetics Edit</span>
-                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-stone-900 leading-tight">
-                                {settings.cosmeticsHeroTitle || 'Nurturing Your Natural Glow.'}
-                            </h1>
-                            <p className="text-stone-600 text-xs sm:text-lg max-w-sm leading-relaxed">
-                                {settings.cosmeticsHeroSubtitle || 'Curated professional beauty essentials for a timeless radiance.'}
-                            </p>
-                            <div className="pt-2">
-                                <button 
-                                    onClick={() => document.getElementById('shop-grid')?.scrollIntoView({ behavior: 'smooth' })}
-                                    className="bg-stone-900 text-white px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-full font-bold text-sm sm:text-base hover:bg-stone-800 transition shadow-xl flex items-center gap-2 group"
-                                >
-                                    <span>Explore Products</span>
-                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                </button>
+                    {settings.showCosmeticsHeroText && (
+                        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full">
+                            <div className="max-w-xl animate-fadeInUp space-y-2 sm:space-y-4">
+                                <span className="text-pink-600 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1 block">The Cosmetics Edit</span>
+                                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-stone-900 leading-tight">
+                                    {settings.cosmeticsHeroTitle || 'Nurturing Your Natural Glow.'}
+                                </h1>
+                                <p className="text-stone-600 text-xs sm:text-lg max-w-sm leading-relaxed">
+                                    {settings.cosmeticsHeroSubtitle || 'Curated professional beauty essentials for a timeless radiance.'}
+                                </p>
+                                <div className="pt-2">
+                                    <button 
+                                        onClick={() => document.getElementById('shop-grid')?.scrollIntoView({ behavior: 'smooth' })}
+                                        className="bg-stone-900 text-white px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-full font-bold text-sm sm:text-base hover:bg-stone-800 transition shadow-xl flex items-center gap-2 group"
+                                    >
+                                        <span>Explore Products</span>
+                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </section>
+                    )}
+                </section>
+            )}
 
             {/* --- CATEGORY SUB-NAV --- */}
             <nav className="sticky top-16 sm:top-20 z-30 bg-white/90 backdrop-blur-md border-b border-pink-100 shadow-sm">
