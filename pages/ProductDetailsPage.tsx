@@ -113,9 +113,15 @@ const ProductDetailsPage: React.FC = () => {
     return product.images.filter(img => img && img !== "");
   }, [product]);
 
-  const sizes = product?.sizes || [];
+  const sizes = useMemo(() => product?.sizes || [], [product]);
   const isFreeSizeOnly = sizes.length === 1 && sizes[0] === 'Free';
-  const singleAvailableSize = sizes.length === 1 ? sizes[0] : null;
+
+  // --- AUTO SELECT SIZE LOGIC ---
+  useEffect(() => {
+    if (product && sizes.length === 1) {
+        setSelectedSize(sizes[0]);
+    }
+  }, [product, sizes]);
 
   const isCosmetics = useMemo(() => product?.category.toLowerCase() === 'cosmetics', [product]);
 
@@ -124,7 +130,6 @@ const ProductDetailsPage: React.FC = () => {
         const currentId = product.productId || product.id;
         if (analyticsFiredId.current !== currentId) {
             setCurrentImageIndex(0);
-            setSelectedSize(singleAvailableSize);
             window.scrollTo(0, 0); 
             
             window.dataLayer = window.dataLayer || [];
@@ -145,7 +150,7 @@ const ProductDetailsPage: React.FC = () => {
             analyticsFiredId.current = currentId;
         }
     }
-  }, [product, singleAvailableSize]);
+  }, [product]);
 
   useEffect(() => {
     if (images.length <= 1 || isPaused) return;
@@ -399,15 +404,13 @@ const ProductDetailsPage: React.FC = () => {
                              return (
                                 <button
                                     key={size}
-                                    onClick={() => !isFreeSizeOnly && setSelectedSize(size)}
-                                    disabled={isFreeSizeOnly && size !== 'Free'}
+                                    onClick={() => setSelectedSize(size)}
                                     className={`
                                         h-10 sm:h-12 min-w-[3.5rem] px-4 rounded-lg flex items-center justify-center text-sm font-semibold transition-all duration-200 border
                                         ${isSelected 
                                             ? 'bg-stone-900 text-white border-stone-900 shadow-md transform scale-105' 
                                             : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
                                         }
-                                        ${isFreeSizeOnly && size !== 'Free' ? 'opacity-40 cursor-not-allowed bg-stone-50 border-stone-100 text-stone-400 decoration-slice line-through' : ''}
                                     `}
                                 >
                                     {size === 'Free' ? 'One Size' : size}
